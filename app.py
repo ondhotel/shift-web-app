@@ -132,6 +132,8 @@ df = load_data()
 
 if not df.empty:
     st.subheader("📊 シフト配置図")
+    
+    # 修正ポイント：barmode="group" を追加
     fig = px.timeline(
         df, 
         x_start="開始", 
@@ -139,10 +141,21 @@ if not df.empty:
         y="従業員", 
         color="部門", 
         text="部門",
-        color_discrete_sequence=px.colors.qualitative.Pastel
+        color_discrete_sequence=px.colors.qualitative.Pastel,
+        barmode="group"  # ← これを追加！
     )
-    fig.update_yaxes(autorange="reversed") # 上から名前順
-    fig.update_layout(xaxis_title="時間", yaxis_title="スタッフ", height=400)
+    
+    # バーの高さを少し細くして見やすくする（重なり防止）
+    fig.update_traces(marker_line_width=1, opacity=0.8)
+    
+    fig.update_yaxes(autorange="reversed")
+    fig.update_layout(
+        xaxis_title="時間", 
+        yaxis_title="スタッフ", 
+        height=400,
+        # 縦軸の重なりを解消するための設定
+        yaxis={'categoryorder':'total ascending'} 
+    )
     st.plotly_chart(fig, use_container_width=True)
 
     # --- CSVダウンロード機能 ---
