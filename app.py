@@ -9,7 +9,7 @@ import urllib.parse
 # 1. 設定（あなたの情報に書き換え）
 # ==========================================
 SPREADSHEET_ID = "1BE8rI5_Em5xe8eAMhpdzG6AvMSwEcMGv-qKdrrpZd08"
-GAS_URL = "https://script.google.com/macros/s/AKfycbxVlMRuc5by8E5VEu5iv37cbt3blwdNJyu0Ey-vAnRkSHJrpX21cEr5lj42HHQC733JRg/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbz-Kay6gzHiTduLJONn8QPp3hIdj0M_AiAc_5XTJQzEJmde8MTL0Z4ul0yjJEx4dDgbRg/exec"
 
 st.set_page_config(layout="wide", page_title="共有シフト管理システム")
 
@@ -54,11 +54,12 @@ with st.sidebar.expander("👤 従業員の追加・削除"):
         st.cache_data.clear()
         st.rerun()
     
-    del_staff = st.selectbox("削除する従業員", STAFF_MASTER)
-    if st.button("選択した従業員を削除"):
-        res = requests.get(GAS_URL, params={"action": "del_master", "value": del_staff})
-        st.cache_data.clear()
-        st.rerun()
+# --- 従業員削除ボタンの修正 ---
+if st.button("選択した従業員を削除"):
+    # type=staff を追加
+    res = requests.get(GAS_URL, params={"action": "del_master", "type": "staff", "value": del_staff})
+    st.cache_data.clear()
+    st.rerun()
 
 # --- 部門管理 ---
 with st.sidebar.expander("🏢 部門の追加・削除"):
@@ -68,11 +69,12 @@ with st.sidebar.expander("🏢 部門の追加・削除"):
         st.cache_data.clear()
         st.rerun()
     
-    del_dept = st.selectbox("削除する部門", DEPT_MASTER)
-    if st.button("選択した部門を削除"):
-        res = requests.get(GAS_URL, params={"action": "del_master", "value": del_dept})
-        st.cache_data.clear()
-        st.rerun()
+# --- 部門削除ボタンの修正 ---
+if st.button("選択した部門を削除"):
+    # type=dept を追加
+    res = requests.get(GAS_URL, params={"action": "del_master", "type": "dept", "value": del_dept})
+    st.cache_data.clear()
+    st.rerun()
 
 # ==========================================
 # 4. メイン画面：シフト登録
