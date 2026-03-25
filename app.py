@@ -5,6 +5,9 @@ import requests
 from datetime import datetime
 import urllib.parse
 
+# カレンダーコンポーネントをインポート
+from calendar_component import render_calendar_component
+
 # ==========================================
 # 1. 設定（あなたの情報に書き換え）
 # ==========================================
@@ -17,38 +20,27 @@ st.set_page_config(layout="wide", page_title="共有シフト管理システム"
 # 2. データの読み込み関数
 # ==========================================
 
-# シフトデータの読み込み
 @st.cache_data(ttl=5)
 def load_data():
     sheet_name = urllib.parse.quote("シフトデータ")
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     try:
-        # 読み込み時に「文字列」として扱い、その後で日時に変換する（エラーを防ぐコツ）
         df = pd.read_csv(url, dtype={'開始': str, '終了': str})
-        
-        # 柔軟に日時に変換（秒があってもなくても、アプリの形式に合わせる）
         df['開始'] = pd.to_datetime(df['開始'], errors='coerce')
         df['終了'] = pd.to_datetime(df['終了'], errors='coerce')
-        
-        # 異常なデータ（空行や変換失敗）を排除
         df = df.dropna(subset=['開始', '終了'])
-        
-        # 開始 < 終了 のデータだけを有効とする
         df = df[df['開始'] < df['終了']]
-        
         return df
     except Exception as e:
         return pd.DataFrame(columns=["従業員", "部門", "開始", "終了"])
 
 
-# マスターデータ（従業員・部門）の読み込み
 @st.cache_data(ttl=5)
 def load_masters():
     sheet_name = urllib.parse.quote("マスター")
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     try:
         master_df = pd.read_csv(url)
-        # 列名が存在するか確認してリスト化
         staff_list = master_df['従業員リスト'].dropna().unique().tolist() if '従業員リスト' in master_df.columns else []
         dept_list = master_df['部門リスト'].dropna().unique().tolist() if '部門リスト' in master_df.columns else []
         return staff_list, dept_list
@@ -61,7 +53,6 @@ def load_masters():
 st.sidebar.title("🛠 管理パネル")
 STAFF_MASTER, DEPT_MASTER = load_masters()
 
-# --- 従業員管理 ---
 with st.sidebar.expander("👤 従業員の追加・削除"):
     new_staff = st.text_input("新メンバー名", key="new_staff_input")
     if st.button("従業員を追加"):
@@ -69,7 +60,7 @@ with st.sidebar.expander("👤 従業員の追加・削除"):
             requests.get(GAS_URL, params={"action": "add_master", "type": "staff", "value": new_staff})
             st.cache_data.clear()
             st.rerun()
-    
+
     st.divider()
     if STAFF_MASTER:
         del_staff = st.selectbox("削除する従業員", STAFF_MASTER)
@@ -78,7 +69,6 @@ with st.sidebar.expander("👤 従業員の追加・削除"):
             st.cache_data.clear()
             st.rerun()
 
-# --- 部門管理 ---
 with st.sidebar.expander("🏢 部門の追加・削除"):
     new_dept = st.text_input("新部門名", key="new_dept_input")
     if st.button("部門を追加"):
@@ -86,7 +76,7 @@ with st.sidebar.expander("🏢 部門の追加・削除"):
             requests.get(GAS_URL, params={"action": "add_master", "type": "dept", "value": new_dept})
             st.cache_data.clear()
             st.rerun()
-    
+
     st.divider()
     if DEPT_MASTER:
         del_dept = st.selectbox("削除する部門", DEPT_MASTER)
@@ -95,17 +85,68 @@ with st.sidebar.expander("🏢 部門の追加・削除"):
             st.cache_data.clear()
             st.rerun()
 
-# --- その他設定 ---
 if st.sidebar.button("🔄 画面を強制更新"):
     st.cache_data.clear()
     st.rerun()
 
 # ==========================================
-# 4. メイン画面：シフト登録
+# 4. タブで画面を切り替える
 # ==========================================
 st.title("職域別・時間割シフト管理")
 
-with st.expander("📝 新しいシフトを登録する", expanded=True):
+tab_calendar, tab_register, tab_chart = st.tabs(["📅 カレンダー", "📝 シフト登録", "📊 タイムライン"])
+
+# ==========================================
+# タブ1: カレンダー（メイン機能）
+# ==========================================
+with tab_calendar:
+    df = load_data()
+    st.markdown("""
+    <style>
+    /* カレンダーのiframeを画面全体に近いサイズに */
+    iframe[title="streamlit_component_1"] {
+        border: none !important;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.info("💡 **操作ガイド**: 日ビューでスタッフ列をドラッグして時間帯を選択→シフト登録 / シフトブロックをクリックで詳細確認 / ←→キーでページ移動", icon="ℹ️")
+
+    # GASのdel_shiftアクションがない場合の注意
+    with st.expander("⚙️ GASスクリプトに削除機能を追加する場合", expanded=False):
+        st.code("""
+// GASに以下を追加（deleteShift関数）
+function doGet(e) {
+  const action = e.parameter.action;
+  // ... 既存のコード ...
+
+  // シフト削除
+  if (action === 'del_shift') {
+    const name  = e.parameter.name;
+    const dept  = e.parameter.dept;
+    const start = e.parameter.start;
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('シフトデータ');
+    const data  = sheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      const rowStart = Utilities.formatDate(new Date(data[i][2]), 'JST', 'yyyy-MM-dd HH:mm');
+      if (data[i][0] == name && data[i][1] == dept && rowStart == start) {
+        sheet.deleteRow(i + 1);
+        break;
+      }
+    }
+    return ContentService.createTextOutput('deleted');
+  }
+}
+        """, language="javascript")
+
+    render_calendar_component(df, STAFF_MASTER, DEPT_MASTER, GAS_URL)
+
+# ==========================================
+# タブ2: シフト登録（既存フォーム）
+# ==========================================
+with tab_register:
     with st.form("shift_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -116,7 +157,7 @@ with st.expander("📝 新しいシフトを登録する", expanded=True):
             t1, t2 = st.columns(2)
             start_t = t1.time_input("開始", datetime.strptime("09:00", "%H:%M"))
             end_t = t2.time_input("終了", datetime.strptime("18:00", "%H:%M"))
-        
+
         if st.form_submit_button("スプレッドシートに保存"):
             if name == "未登録" or dept == "未登録":
                 st.error("先に左の管理パネルから従業員と部門を登録してください。")
@@ -136,55 +177,47 @@ with st.expander("📝 新しいシフトを登録する", expanded=True):
                 st.rerun()
 
 # ==========================================
-# 5. グラフ（タイムライン）表示
+# タブ3: タイムライン（既存グラフ）
 # ==========================================
-st.divider()
-df = load_data()
+with tab_chart:
+    df = load_data()
 
-if not df.empty:
-    st.subheader("📊 シフト配置図（全登録データ）")
-    
-    # 1. 念のため「開始 < 終了」のデータだけに絞る
-    valid_df = df[df['開始'] < df['終了']].copy()
-    
-    if not valid_df.empty:
-        # 2. 縦軸が被らないように「名前 + 開始時間」で並び替える
-        valid_df = valid_df.sort_values(by=["従業員", "開始"])
+    if not df.empty:
+        valid_df = df[df['開始'] < df['終了']].copy()
 
-        # 3. タイムライン作成
-        fig = px.timeline(
-            valid_df, 
-            x_start="開始", 
-            x_end="終了", 
-            y="従業員", 
-            color="部門", 
-            text="部門",
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-        
-        # 4. 【ここが重要】表示範囲を「データの最小〜最大」に自動で合わせる
-        fig.update_layout(
-            barmode='group',
-            xaxis_title="日付・時刻",
-            yaxis_title="スタッフ",
-            height=600,
-            # X軸（時間軸）をデータがある範囲に自動調整する設定
-            xaxis=dict(
-                type='date',
-                autorange=True,
-                tickformat="%m/%d %H:%M" # 月/日 時:分 表示にする
+        if not valid_df.empty:
+            valid_df = valid_df.sort_values(by=["従業員", "開始"])
+            fig = px.timeline(
+                valid_df,
+                x_start="開始",
+                x_end="終了",
+                y="従業員",
+                color="部門",
+                text="部門",
+                color_discrete_sequence=px.colors.qualitative.Pastel
             )
+            fig.update_layout(
+                barmode='group',
+                xaxis_title="日付・時刻",
+                yaxis_title="スタッフ",
+                height=600,
+                xaxis=dict(
+                    type='date',
+                    autorange=True,
+                    tickformat="%m/%d %H:%M"
+                )
+            )
+            fig.update_yaxes(autorange="reversed", type='category')
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("有効なシフトデータ（開始 < 終了）がありません。")
+
+        csv = df.to_csv(index=False).encode('utf_8_sig')
+        st.sidebar.download_button(
+            "📥 CSVダウンロード",
+            csv,
+            f"shift_{datetime.now().strftime('%Y%m%d')}.csv",
+            "text/csv"
         )
-        
-        fig.update_yaxes(autorange="reversed", type='category')
-        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("有効なシフトデータ（開始 < 終了）がありません。スプレッドシートの時刻を確認してください。")
-
-    # --- CSVダウンロード ---
-    csv = df.to_csv(index=False).encode('utf_8_sig')
-    st.sidebar.download_button("📥 CSVダウンロード", csv, f"shift_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
-
-
-else:
-    st.info("登録されているシフトデータがありません。")
+        st.info("登録されているシフトデータがありません。")
