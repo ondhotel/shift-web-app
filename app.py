@@ -18,36 +18,18 @@ st.set_page_config(layout="wide", page_title="共有シフト管理システム"
 # ==========================================
 
 # シフトデータの読み込み
-#@st.cache_data(ttl=5)
-#def load_data():
-#    sheet_name = urllib.parse.quote("シフトデータ")
-#    url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-#    try:
-#        df = pd.read_csv(url)
-#        df['開始'] = pd.to_datetime(df['開始'], errors='coerce')
-#        df['終了'] = pd.to_datetime(df['終了'], errors='coerce')
-#        return df.dropna(subset=['開始', '終了'])
-#    except:
-#        return pd.DataFrame(columns=["従業員", "部門", "開始", "終了"])
-
 @st.cache_data(ttl=5)
 def load_data():
     sheet_name = urllib.parse.quote("シフトデータ")
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     try:
         df = pd.read_csv(url)
-        # --- ここからデバッグ用表示 ---
-        st.sidebar.write(f"デバッグ：読み込んだ行数 = {len(df)}")
-        if not df.empty:
-            st.sidebar.write("デバッグ：読み込んだ名前一覧:", df['従業員'].unique().tolist())
-        # --- ここまで ---
-        
         df['開始'] = pd.to_datetime(df['開始'], errors='coerce')
         df['終了'] = pd.to_datetime(df['終了'], errors='coerce')
         return df.dropna(subset=['開始', '終了'])
-    except Exception as e:
-        st.sidebar.error(f"読み込みエラー詳細: {e}")
+    except:
         return pd.DataFrame(columns=["従業員", "部門", "開始", "終了"])
+
 
 # マスターデータ（従業員・部門）の読み込み
 @st.cache_data(ttl=5)
