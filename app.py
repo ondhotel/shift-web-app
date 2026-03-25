@@ -133,45 +133,50 @@ df = load_data()
 if not df.empty:
     st.subheader("📊 シフト配置図")
     
-    # 1. タイムラインを作成（名前順に並べるため、先にソートしたデータを使うのがコツ）
-    display_df = df.sort_values(by=["従業員", "開始"])
+    # 【解決策】表示用のラベルを作る
+    # 同じ人でも、部門が違えば別の行に見えるように「名前 (部門)」という列を作ります
+    display_df = df.copy()
+    display_df['表示ラベル'] = display_df['従業員'] + " (" + display_df['部門'] + ")"
     
+    # 時間順・名前順に並び替え
+    display_df = display_df.sort_values(by=["従業員", "開始"])
+
     fig = px.timeline(
         display_df, 
         x_start="開始", 
         x_end="終了", 
-        y="従業員", 
+        y="表示ラベル",  # 縦軸を「名前(部門)」にする
         color="部門", 
         text="部門",
-        color_discrete_sequence=px.colors.qualitative.Pastel,
-        # barmode="overlay" に戻しつつ、透明度で重なりを見せる設定にします
+        color_discrete_sequence=px.colors.qualitative.Pastel
     )
     
-    # 2. レイアウトの調整
+    # レイアウトの調整
     fig.update_layout(
         xaxis_title="時間", 
-        yaxis_title="スタッフ", 
-        height=600, # 少し高さを出して全員分入りやすくします
-        showlegend=True
+        yaxis_title="スタッフ (担当)", 
+        height=len(display_df) * 40 + 100, # 人数に合わせてグラフの高さを自動調整
+        showlegend=True,
+        xaxis=dict(
+            tickformat="%H:%M",  # 24時間表示
+            dtick=3600000 * 1    # 1時間刻みにメモリを振る
+        )
     )
     
-    # 3. Y軸（名前）の設定を「自動」に戻して全員分表示させる
+    # 見やすく調整（上から順）
     fig.update_yaxes(autorange="reversed", type='category')
     
-    # 4. バーを少し細くして、重なりがわかるようにする
-    fig.update_traces(opacity=0.7, marker_line_width=1)
-    
     st.plotly_chart(fig, use_container_width=True)
-    
 
     # --- CSVダウンロード機能 ---
     csv = df.to_csv(index=False).encode('utf_8_sig')
-    st.download_button(
-        label="📥 TouchOnTime用CSVをダウンロード",
+    st.sidebar.download_button(
+        label="📥 CSVダウンロード",
         data=csv,
-        file_name=f"shift_export_{datetime.now().strftime('%Y%m%d')}.csv",
+        file_name=f"shift_{datetime.now().strftime('%Y%m%d')}.csv",
         mime="text/csv",
     )
+
 
 else:
     st.info("登録されているシフトデータがありません。")
