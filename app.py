@@ -23,22 +23,21 @@ def load_data():
     sheet_name = urllib.parse.quote("シフトデータ")
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     try:
-        # 一旦文字列として読み込む
-        df = pd.read_csv(url)
+        # 読み込み時に「文字列」として扱い、その後で日時に変換する（エラーを防ぐコツ）
+        df = pd.read_csv(url, dtype={'開始': str, '終了': str})
         
-        # 時間の変換を「超強力」にする (formatを指定せず推測させる)
+        # 柔軟に日時に変換（秒があってもなくても、アプリの形式に合わせる）
         df['開始'] = pd.to_datetime(df['開始'], errors='coerce')
         df['終了'] = pd.to_datetime(df['終了'], errors='coerce')
         
-        # 無効な行（変換できなかった行）を消す
+        # 異常なデータ（空行や変換失敗）を排除
         df = df.dropna(subset=['開始', '終了'])
         
-        # さらに念押しで、開始 < 終了 のデータだけに絞る
+        # 開始 < 終了 のデータだけを有効とする
         df = df[df['開始'] < df['終了']]
         
         return df
     except Exception as e:
-        st.error(f"データ読み込みエラー: {e}")
         return pd.DataFrame(columns=["従業員", "部門", "開始", "終了"])
 
 
