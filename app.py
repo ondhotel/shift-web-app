@@ -45,7 +45,7 @@ STAFF_MASTER, DEPT_MASTER = load_masters()
 df = load_data()
 
 # ==========================================
-# 3. メイン画面（入力）
+# 3. メイン画面（登録）
 # ==========================================
 st.title("職域別・時間割シフト管理")
 
@@ -68,21 +68,29 @@ with st.expander("📝 新しいシフトを登録する", expanded=True):
             st.rerun()
 
 # ==========================================
-# 4. グラフ表示 & データ確認
+# 4. グラフ表示（ここがエラーの場所でした）
 # ==========================================
 st.divider()
 
 if not df.empty:
     st.subheader("📊 シフト配置図")
     
-    # グラフ用データの整理
-    plot_df = df.copy()
-    # 開始 < 終了 のものだけ表示
-    plot_df = plot_df[plot_df['開始'] < plot_df['終了']]
+    # グラフ用データの整理（開始 < 終了 のものだけ）
+    plot_df = df[df['開始'] < df['終了']].copy()
     
     if not plot_df.empty:
         # 1. タイムライン作成
         fig = px.timeline(
             plot_df, 
             x_start="開始", 
-            x_end="
+            x_end="終了", 
+            y="従業員", 
+            color="部門",
+            text="部門",
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        
+        # 2. レイアウト設定
+        fig.update_yaxes(type='category', autorange="reversed")
+        fig.update_layout(
+            barmode
