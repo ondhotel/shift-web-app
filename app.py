@@ -11,7 +11,7 @@ from calendar_component import render_calendar_component
 # 1. 設定
 # ==========================================
 SPREADSHEET_ID = "1BE8rI5_Em5xe8eAMhpdzG6AvMSwEcMGv-qKdrrpZd08"
-GAS_URL = "https://script.google.com/macros/s/AKfycbzBRZcKTqoigPZGJY4NvDky0mJOAwtNf4NWvF0wE7pkNVOz-QxSEaCmq0NgkordTTxLJg/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbwOlPZISj2mFPMsclBLg3rarAQfumrBkCrDVCP16BdSnNarJ2gIsBnbhYBT2fQDMWq-0Q/exec"
 
 st.set_page_config(layout="wide", page_title="共有シフト管理システム")
 
