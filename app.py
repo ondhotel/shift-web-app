@@ -133,49 +133,43 @@ df = load_data()
 if not df.empty:
     st.subheader("📊 シフト配置図")
     
-    # 【解決策】表示用のラベルを作る
-    # 同じ人でも、部門が違えば別の行に見えるように「名前 (部門)」という列を作ります
-    display_df = df.copy()
-    display_df['表示ラベル'] = display_df['従業員'] + " (" + display_df['部門'] + ")"
+    # 1. データを並び替えて、各行に「ユニークな番号」を振る
+    display_df = df.sort_values(by=["従業員", "開始"]).reset_index(drop=True)
+    display_df['行番号'] = display_df.index # これを縦軸にする
     
-    # 時間順・名前順に並び替え
-    display_df = display_df.sort_values(by=["従業員", "開始"])
-
+    # 2. タイムラインを作成（縦軸は「行番号」にするのがコツ）
     fig = px.timeline(
         display_df, 
         x_start="開始", 
         x_end="終了", 
-        y="表示ラベル",  # 縦軸を「名前(部門)」にする
+        y="行番号",  # 名前ではなく「行番号」を指定することで、1データ1行を強制する
         color="部門", 
-        text="部門",
+        text="従業員", # バーの中に名前を表示
         color_discrete_sequence=px.colors.qualitative.Pastel
     )
     
-    # レイアウトの調整
-    fig.update_layout(
-        xaxis_title="時間", 
-        yaxis_title="スタッフ (担当)", 
-        height=len(display_df) * 40 + 100, # 人数に合わせてグラフの高さを自動調整
-        showlegend=True,
-        xaxis=dict(
-            tickformat="%H:%M",  # 24時間表示
-            dtick=3600000 * 1    # 1時間刻みにメモリを振る
-        )
+    # 3. 縦軸の目盛り（0, 1, 2...）を「従業員名」に書き換える
+    fig.update_yaxes(
+        tickmode='array',
+        tickvals=display_df.index,
+        ticktext=display_df['従業員'],
+        autorange="reversed"
     )
     
-    # 見やすく調整（上から順）
-    fig.update_yaxes(autorange="reversed", type='category')
+    # 4. レイアウト調整
+    fig.update_layout(
+        xaxis_title="時間", 
+        yaxis_title="スタッフ", 
+        height=len(display_df) * 40 + 100, # データ数に応じて高さを自動調整
+        showlegend=True,
+        xaxis=dict(tickformat="%H:%M")
+    )
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- CSVダウンロード機能 ---
+    # --- CSVダウンロード ---
     csv = df.to_csv(index=False).encode('utf_8_sig')
-    st.sidebar.download_button(
-        label="📥 CSVダウンロード",
-        data=csv,
-        file_name=f"shift_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-    )
+    st.sidebar.download_button("📥 CSVダウンロード", csv, f"shift_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
 
 
 else:
