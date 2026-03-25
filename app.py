@@ -40,7 +40,7 @@ def load_masters():
     except:
         return [], []
 
-# --- データ取得 ---
+# データ読み込み
 STAFF_MASTER, DEPT_MASTER = load_masters()
 df = load_data()
 
@@ -59,38 +59,4 @@ with st.expander("📝 新しいシフトを登録する", expanded=True):
             date = st.date_input("日付", datetime.now())
             t1, t2 = st.columns(2)
             start_t = t1.time_input("開始", datetime.strptime("09:00", "%H:%M"))
-            end_t = t2.time_input("終了", datetime.strptime("18:00", "%H:%M"))
-        
-        if st.form_submit_button("保存"):
-            params = {"action": "add_shift", "name": name, "dept": dept, "start": f"{date} {start_t}", "end": f"{date} {end_t}"}
-            requests.get(GAS_URL, params=params)
-            st.cache_data.clear()
-            st.rerun()
-
-# ==========================================
-# 4. グラフ表示（ここがエラーの場所でした）
-# ==========================================
-st.divider()
-
-if not df.empty:
-    st.subheader("📊 シフト配置図")
-    
-    # グラフ用データの整理（開始 < 終了 のものだけ）
-    plot_df = df[df['開始'] < df['終了']].copy()
-    
-    if not plot_df.empty:
-        # 1. タイムライン作成
-        fig = px.timeline(
-            plot_df, 
-            x_start="開始", 
-            x_end="終了", 
-            y="従業員", 
-            color="部門",
-            text="部門",
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-        
-        # 2. レイアウト設定
-        fig.update_yaxes(type='category', autorange="reversed")
-        fig.update_layout(
-            barmode
+            end_t = t2.time_input("終了", datetime.strptime("18:00", "%
