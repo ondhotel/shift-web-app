@@ -133,7 +133,7 @@ df = load_data()
 if not df.empty:
     st.subheader("📊 シフト配置図")
     
-    # 修正ポイント：barmode="group" を追加
+    # 1. まずはタイムラインを作成（ここではbarmodeを書かない）
     fig = px.timeline(
         df, 
         x_start="開始", 
@@ -141,21 +141,21 @@ if not df.empty:
         y="従業員", 
         color="部門", 
         text="部門",
-        color_discrete_sequence=px.colors.qualitative.Pastel,
-        barmode="group"  # ← これを追加！
+        color_discrete_sequence=px.colors.qualitative.Pastel
     )
     
-    # バーの高さを少し細くして見やすくする（重なり防止）
-    fig.update_traces(marker_line_width=1, opacity=0.8)
-    
-    fig.update_yaxes(autorange="reversed")
+    # 2. 作成したあとに「重ねず並べる(group)」設定を追加する
     fig.update_layout(
+        barmode='group', # ここで「重なり」を解消
         xaxis_title="時間", 
         yaxis_title="スタッフ", 
         height=400,
-        # 縦軸の重なりを解消するための設定
         yaxis={'categoryorder':'total ascending'} 
     )
+    
+    # 見やすく調整（上から名前順）
+    fig.update_yaxes(autorange="reversed")
+    
     st.plotly_chart(fig, use_container_width=True)
 
     # --- CSVダウンロード機能 ---
@@ -166,5 +166,6 @@ if not df.empty:
         file_name=f"shift_export_{datetime.now().strftime('%Y%m%d')}.csv",
         mime="text/csv",
     )
+
 else:
     st.info("登録されているシフトデータがありません。")
