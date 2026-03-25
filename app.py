@@ -45,3 +45,33 @@ if not df.empty:
     fig = px.timeline(df, x_start="開始", x_end="終了", y="従業員", color="部門", text="部門")
     fig.update_yaxes(autorange="reversed")
     st.plotly_chart(fig, use_container_width=True)
+
+
+
+# --- 6. TouchOnTime (ToT) 連携用CSV出力 ---
+st.divider()
+st.subheader("📥 勤怠システム連携")
+
+if not df.empty:
+    # ToTのインポート形式に合わせてデータを整形（例：従業員コード, 日付, 開始時刻, 終了時刻...）
+    # ここでは簡易的に現在のデータをCSV化しますが、ToTの仕様に合わせて列名を変更可能です
+    tot_df = df.copy()
+    
+    # 時間の表示をToTが読み込みやすい "HH:mm" 形式に整える
+    tot_df['開始時刻'] = tot_df['開始'].dt.strftime('%H:%M')
+    tot_df['終了時刻'] = tot_df['終了'].dt.strftime('%H:%M')
+    tot_df['日付'] = tot_df['開始'].dt.strftime('%Y/%m/%d')
+    
+    # 必要な列だけを抽出（ToTの並び順に合わせる）
+    output_df = tot_df[['従業員', '日付', '開始時刻', '終了時刻', '部門']]
+
+    # CSVボタンの設置
+    csv = output_df.to_csv(index=False).encode('utf_8_sig')
+    st.download_button(
+        label="TouchOnTime用CSVをダウンロード",
+        data=csv,
+        file_name=f"tot_shift_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+    )
+else:
+    st.write("データがないためCSVは作成できません。")
