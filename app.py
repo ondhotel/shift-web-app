@@ -133,30 +133,36 @@ df = load_data()
 if not df.empty:
     st.subheader("📊 シフト配置図")
     
-    # 1. まずはタイムラインを作成（ここではbarmodeを書かない）
+    # 1. タイムラインを作成（名前順に並べるため、先にソートしたデータを使うのがコツ）
+    display_df = df.sort_values(by=["従業員", "開始"])
+    
     fig = px.timeline(
-        df, 
+        display_df, 
         x_start="開始", 
         x_end="終了", 
         y="従業員", 
         color="部門", 
         text="部門",
-        color_discrete_sequence=px.colors.qualitative.Pastel
+        color_discrete_sequence=px.colors.qualitative.Pastel,
+        # barmode="overlay" に戻しつつ、透明度で重なりを見せる設定にします
     )
     
-    # 2. 作成したあとに「重ねず並べる(group)」設定を追加する
+    # 2. レイアウトの調整
     fig.update_layout(
-        barmode='group', # ここで「重なり」を解消
         xaxis_title="時間", 
         yaxis_title="スタッフ", 
-        height=400,
-        yaxis={'categoryorder':'total ascending'} 
+        height=600, # 少し高さを出して全員分入りやすくします
+        showlegend=True
     )
     
-    # 見やすく調整（上から名前順）
-    fig.update_yaxes(autorange="reversed")
+    # 3. Y軸（名前）の設定を「自動」に戻して全員分表示させる
+    fig.update_yaxes(autorange="reversed", type='category')
+    
+    # 4. バーを少し細くして、重なりがわかるようにする
+    fig.update_traces(opacity=0.7, marker_line_width=1)
     
     st.plotly_chart(fig, use_container_width=True)
+    
 
     # --- CSVダウンロード機能 ---
     csv = df.to_csv(index=False).encode('utf_8_sig')
