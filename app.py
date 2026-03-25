@@ -142,41 +142,44 @@ st.divider()
 df = load_data()
 
 if not df.empty:
-    st.subheader("📊 シフト配置図")
+    st.subheader("📊 シフト配置図（全登録データ）")
     
-    # 1. データを並び替えて、各行に「ユニークな番号」を振る
-    display_df = df.sort_values(by=["従業員", "開始"]).reset_index(drop=True)
-    display_df['行番号'] = display_df.index # これを縦軸にする
+    # 1. 念のため「開始 < 終了」のデータだけに絞る
+    valid_df = df[df['開始'] < df['終了']].copy()
     
-    # 2. タイムラインを作成（縦軸は「行番号」にするのがコツ）
-    fig = px.timeline(
-        display_df, 
-        x_start="開始", 
-        x_end="終了", 
-        y="行番号",  # 名前ではなく「行番号」を指定することで、1データ1行を強制する
-        color="部門", 
-        text="従業員", # バーの中に名前を表示
-        color_discrete_sequence=px.colors.qualitative.Pastel
-    )
-    
-    # 3. 縦軸の目盛り（0, 1, 2...）を「従業員名」に書き換える
-    fig.update_yaxes(
-        tickmode='array',
-        tickvals=display_df.index,
-        ticktext=display_df['従業員'],
-        autorange="reversed"
-    )
-    
-    # 4. レイアウト調整
-    fig.update_layout(
-        xaxis_title="時間", 
-        yaxis_title="スタッフ", 
-        height=len(display_df) * 40 + 100, # データ数に応じて高さを自動調整
-        showlegend=True,
-        xaxis=dict(tickformat="%H:%M")
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+    if not valid_df.empty:
+        # 2. 縦軸が被らないように「名前 + 開始時間」で並び替える
+        valid_df = valid_df.sort_values(by=["従業員", "開始"])
+
+        # 3. タイムライン作成
+        fig = px.timeline(
+            valid_df, 
+            x_start="開始", 
+            x_end="終了", 
+            y="従業員", 
+            color="部門", 
+            text="部門",
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        
+        # 4. 【ここが重要】表示範囲を「データの最小〜最大」に自動で合わせる
+        fig.update_layout(
+            barmode='group',
+            xaxis_title="日付・時刻",
+            yaxis_title="スタッフ",
+            height=600,
+            # X軸（時間軸）をデータがある範囲に自動調整する設定
+            xaxis=dict(
+                type='date',
+                autorange=True,
+                tickformat="%m/%d %H:%M" # 月/日 時:分 表示にする
+            )
+        )
+        
+        fig.update_yaxes(autorange="reversed", type='category')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("有効なシフトデータ（開始 < 終了）がありません。スプレッドシートの時刻を確認してください。")
 
     # --- CSVダウンロード ---
     csv = df.to_csv(index=False).encode('utf_8_sig')
