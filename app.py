@@ -9,7 +9,7 @@ import urllib.parse
 # 1. 設定（あなたの情報に書き換え）
 # ==========================================
 SPREADSHEET_ID = "1BE8rI5_Em5xe8eAMhpdzG6AvMSwEcMGv-qKdrrpZd08"
-GAS_URL = "https://script.google.com/macros/s/AKfycbz-Kay6gzHiTduLJONn8QPp3hIdj0M_AiAc_5XTJQzEJmde8MTL0Z4ul0yjJEx4dDgbRg/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbzYRSShaLNjiVp9PMLjcOKmrR8E5IvmyhomrdWbidiwXT1p7swtg1tByf77GAF78jVI8w/exec"
 
 st.set_page_config(layout="wide", page_title="共有シフト管理システム")
 
