@@ -183,40 +183,63 @@ with tab_chart:
     df = load_data()
 
     if not df.empty:
-        valid_df = df[df['開始'] < df['終了']].copy()
+        # --- 表示期間の設定を追加 ---
+        st.subheader("🔍 表示期間の絞り込み")
+        col_t1, col_t2 = st.columns(2)
+        
+        # デフォルトで「今日」を表示
+        with col_t1:
+            start_filter = st.date_input("開始日", datetime.now().date())
+        with col_t2:
+            end_filter = st.date_input("終了日", datetime.now().date())
 
-        if not valid_df.empty:
-            valid_df = valid_df.sort_values(by=["従業員", "開始"])
-            fig = px.timeline(
-                valid_df,
-                x_start="開始",
-                x_end="終了",
-                y="従業員",
-                color="部門",
-                text="部門",
-                color_discrete_sequence=px.colors.qualitative.Pastel
-            )
-            fig.update_layout(
-                barmode='group',
-                xaxis_title="日付・時刻",
-                yaxis_title="スタッフ",
-                height=600,
-                xaxis=dict(
-                    type='date',
-                    autorange=True,
-                    tickformat="%m/%d %H:%M"
+        # データを期間でフィルタリング
+        # start_filterの00:00:00から、end_filterの23:59:59まで
+        mask = (df['開始'].dt.date >= start_filter) & (df['開始'].dt.date <= end_filter)
+        display_df = df.loc[mask].copy()
+
+        if not display_df.empty:
+            valid_df = display_df[display_df['開始'] < display_df['終了']].copy()
+
+            if not valid_df.empty:
+                valid_df = valid_df.sort_values(by=["従業員", "開始"])
+                fig = px.timeline(
+                    valid_df,
+                    x_start="開始",
+                    x_end="終了",
+                    y="従業員",
+                    color="部門",
+                    text="部門",
+                    color_discrete_sequence=px.colors.qualitative.Pastel
                 )
-            )
-            fig.update_yaxes(autorange="reversed", type='category')
-            st.plotly_chart(fig, use_container_width=True)
+                fig.update_layout(
+                    barmode='group',
+                    xaxis_title="日付・時刻",
+                    yaxis_title="スタッフ",
+                    height=max(400, len(valid_df['従業員'].unique()) * 50), # 人数に合わせて高さを調整
+                    xaxis=dict(
+                        type='date',
+                        tickformat="%m/%d %H:%M",
+                        # グラフの端っこを、選択した日付の範囲に固定する
+                        range=[
+                            datetime.combine(start_filter, datetime.min.time()),
+                            datetime.combine(end_filter, datetime.max.time())
+                        ]
+                    )
+                )
+                fig.update_yaxes(autorange="reversed", type='category')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("選択された期間に有効なシフトデータがありません。")
         else:
-            st.warning("有効なシフトデータ（開始 < 終了）がありません。")
+            st.info(f"{start_filter} から {end_filter} の期間にデータは見つかりませんでした。")
 
+        # ダウンロードボタンはここに配置
         csv = df.to_csv(index=False).encode('utf_8_sig')
-        st.sidebar.download_button(
-            "📥 CSVダウンロード",
+        st.download_button(
+            "📥 全データをCSVダウンロード",
             csv,
-            f"shift_{datetime.now().strftime('%Y%m%d')}.csv",
+            f"shift_all_{datetime.now().strftime('%Y%m%d')}.csv",
             "text/csv"
         )
     else:
