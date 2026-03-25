@@ -7,8 +7,8 @@ from datetime import datetime
 # ==========================================
 # 1. 設定（あなたの情報に書き換えてください）
 # ==========================================
-SPREADSHEET_ID = "ここにスプレッドシートのIDを貼る"
-GAS_URL = "ここにGASのURLを貼る"
+SPREADSHEET_ID = "1BE8rI5_Em5xe8eAMhpdzG6AvMSwEcMGv-qKdrrpZd08"
+GAS_URL = "https://script.google.com/macros/s/AKfycbxpJ_yQ84FozwUVhNH4lMCtwTkyrHA8txwCqiG5zFTabjNy2CQzSab7u65dHBqqtmeUXA/exec"
 
 # マスターデータ（ここを編集すれば選択肢が変わります）
 STAFF_MASTER = ["田中", "佐藤", "鈴木", "高橋", "伊藤", "山田"]
