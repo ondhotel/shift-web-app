@@ -53,22 +53,6 @@ def load_masters():
 st.sidebar.title("🛠 管理パネル")
 STAFF_MASTER, DEPT_MASTER = load_masters()
 
-# --- データのダウンロード機能（ここに配置） ---
-st.sidebar.subheader("💾 データ出力")
-df_for_csv = load_data() # 最新データを取得
-if not df_for_csv.empty:
-    csv = df_for_csv.to_csv(index=False).encode('utf_8_sig')
-    st.sidebar.download_button(
-        label="📥 CSVをダウンロード",
-        data=csv,
-        file_name=f"shift_export_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-        use_container_width=True # ボタンを横幅いっぱいに広げる)
-else:
-    st.sidebar.info("ダウンロードできるデータがありません")
-
-st.sidebar.divider()
-
 with st.sidebar.expander("👤 従業員の追加・削除"):
     new_staff = st.text_input("新メンバー名", key="new_staff_input")
     if st.button("従業員を追加"):
