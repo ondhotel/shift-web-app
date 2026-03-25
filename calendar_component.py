@@ -1,23 +1,12 @@
 """
 カレンダービューコンポーネント
-既存のシフト管理アプリに追加するモジュール
 """
-
 import streamlit.components.v1 as components
 import json
 import pandas as pd
-from datetime import datetime, timedelta
-import calendar
 
 
 def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: list, gas_url: str):
-    """
-    月・週・日の3ビューカレンダーをStreamlitに埋め込む
-    ドラッグで時間帯を選択してシフト登録できる
-    日ビュー: 0時〜翌6時（30時間表示）
-    """
-
-    # DataFrameをJSON化（行インデックスも付与して削除時に照合に使う）
     shifts_json = []
     if not df.empty:
         for idx, row in df.iterrows():
@@ -32,593 +21,645 @@ def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: lis
             except Exception:
                 pass
 
-    staff_json     = json.dumps(staff_list, ensure_ascii=False)
-    dept_json      = json.dumps(dept_list, ensure_ascii=False)
+    staff_json      = json.dumps(staff_list, ensure_ascii=False)
+    dept_json       = json.dumps(dept_list, ensure_ascii=False)
     shifts_json_str = json.dumps(shifts_json, ensure_ascii=False)
 
     color_palette = [
-        "#4f86c6", "#e07b5a", "#5aad8f", "#b07fc7", "#e0b84a",
-        "#5abfcc", "#e07bb0", "#7ec45a", "#c47e5a", "#5a7ec4",
-        "#c4b05a", "#5ac4a2", "#c45a7e", "#8fc45a", "#c45ab0", "#5a8fc4"
+        "#4f86c6","#e07b5a","#5aad8f","#b07fc7","#e0b84a",
+        "#5abfcc","#e07bb0","#7ec45a","#c47e5a","#5a7ec4",
+        "#c4b05a","#5ac4a2","#c45a7e","#8fc45a","#c45ab0","#5a8fc4"
     ]
 
-    html_code = f"""
-<!DOCTYPE html>
+    # ★ 修正: heightを固定px値で渡し、内部はそのpx-topbarで flex表示
+    COMPONENT_HEIGHT = 780
+
+    html_code = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2d3148;
+  --text:#e8eaf2;--text-muted:#6b7094;--accent:#5b8af0;--accent2:#8b5cf6;
+  --success:#34d399;--danger:#f87171;--warn:#f59e0b;
+  --today:rgba(91,138,240,.12);--hover:rgba(91,138,240,.08);
+  --drag:rgba(91,138,240,.25);--nextday:rgba(139,92,246,.06);
+  --font:'Noto Sans JP',sans-serif;--mono:'JetBrains Mono',monospace;
+}}
+*{{margin:0;padding:0;box-sizing:border-box;}}
+html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;user-select:none;}}
 
-  :root {{
-    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2d3148;
-    --text:#e8eaf2; --text-muted:#6b7094; --accent:#5b8af0; --accent2:#8b5cf6;
-    --success:#34d399; --danger:#f87171;
-    --today:rgba(91,138,240,0.12); --hover:rgba(91,138,240,0.08);
-    --drag:rgba(91,138,240,0.25); --next-day:rgba(139,92,246,0.06);
-    --font:'Noto Sans JP',sans-serif; --mono:'JetBrains Mono',monospace;
-  }}
-  *{{margin:0;padding:0;box-sizing:border-box;}}
-  body{{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;user-select:none;}}
+/* ── layout ── */
+#app{{display:flex;flex-direction:column;height:{COMPONENT_HEIGHT}px;}}
+#topbar{{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;height:52px;}}
+#cal{{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}}
 
-  /* TOP BAR */
-  .topbar{{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;}}
-  .view-tabs{{display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:2px;}}
-  .view-tab{{padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);transition:all .18s;border:none;background:transparent;}}
-  .view-tab.active{{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(91,138,240,.4);}}
-  .view-tab:hover:not(.active){{background:var(--hover);color:var(--text);}}
-  .nav-group{{display:flex;align-items:center;gap:8px;}}
-  .nav-btn{{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;}}
-  .nav-btn:hover{{background:var(--hover);border-color:var(--accent);}}
-  .period-label{{font-size:15px;font-weight:700;min-width:180px;text-align:center;}}
-  .today-btn{{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;font-family:var(--font);font-weight:500;transition:all .15s;}}
-  .today-btn:hover{{border-color:var(--accent);color:var(--accent);}}
-  .filter-group{{display:flex;gap:8px;margin-left:auto;align-items:center;}}
-  .filter-select{{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;}}
+/* ── topbar widgets ── */
+.view-tabs{{display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:2px;}}
+.vt{{padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);border:none;background:transparent;transition:all .15s;font-family:var(--font);}}
+.vt.on{{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(91,138,240,.4);}}
+.vt:hover:not(.on){{background:var(--hover);color:var(--text);}}
+.nav-grp{{display:flex;align-items:center;gap:6px;}}
+.nb{{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;}}
+.nb:hover{{border-color:var(--accent);background:var(--hover);}}
+#plabel{{font-size:14px;font-weight:700;min-width:170px;text-align:center;}}
+.today-btn{{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;font-family:var(--font);font-weight:500;}}
+.today-btn:hover{{border-color:var(--accent);color:var(--accent);}}
+.fgrp{{display:flex;gap:8px;margin-left:auto;align-items:center;}}
+.fsel{{padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;}}
 
-  /* CALENDAR ROOT */
-  #calendar-root{{flex:1;overflow:hidden;display:flex;flex-direction:column;}}
+/* ── month ── */
+.month-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
+.mhdr{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);flex-shrink:0;}}
+.mhc{{padding:7px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;}}
+.mhc:first-child{{color:#f87171;}}.mhc:last-child{{color:#60a5fa;}}
+.mgrid{{flex:1;display:grid;grid-template-rows:repeat(6,1fr);overflow-y:auto;}}
+.mrow{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}}
+.mcell{{border-right:1px solid var(--border);padding:5px;cursor:pointer;transition:background .12s;overflow:hidden;min-height:80px;}}
+.mcell:hover{{background:var(--hover);}}
+.mcell.other{{opacity:.35;}}.mcell.tod{{background:var(--today);}}
+.mcell.sun .dnum{{color:#f87171;}}.mcell.sat .dnum{{color:#60a5fa;}}
+.dnum{{font-size:12px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--mono);margin-bottom:3px;}}
+.tod .dnum{{background:var(--accent);color:#fff;}}
+.mchip{{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;}}
+.mmore{{font-size:10px;color:var(--text-muted);cursor:pointer;padding:1px 4px;}}
+.mmore:hover{{color:var(--accent);}}
 
-  /* MONTH */
-  .month-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;}}
-  .month-header{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}}
-  .month-header-cell{{padding:8px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;}}
-  .month-header-cell:first-child{{color:#f87171;}}
-  .month-header-cell:last-child{{color:#60a5fa;}}
-  .month-grid{{flex:1;display:grid;grid-template-rows:repeat(6,1fr);overflow-y:auto;}}
-  .month-row{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);min-height:100px;}}
-  .month-cell{{border-right:1px solid var(--border);padding:6px;cursor:pointer;transition:background .12s;overflow:hidden;min-height:90px;}}
-  .month-cell:hover{{background:var(--hover);}}
-  .month-cell.other-month{{opacity:.35;}}
-  .month-cell.today{{background:var(--today);}}
-  .month-cell.sunday .day-num{{color:#f87171;}}
-  .month-cell.saturday .day-num{{color:#60a5fa;}}
-  .day-num{{font-size:12px;font-weight:600;margin-bottom:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--mono);}}
-  .today .day-num{{background:var(--accent);color:#fff;}}
-  .month-shift-chip{{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;}}
-  .month-more{{font-size:10px;color:var(--text-muted);padding:1px 4px;cursor:pointer;}}
-  .month-more:hover{{color:var(--accent);}}
+/* ── week ── */
+.week-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
+.whdr{{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
+.whcorner{{padding:8px 0;}}
+.whday{{padding:7px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;}}
+.whday:hover{{background:var(--hover);}}
+.wdow{{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}}
+.wdnum{{font-size:18px;font-weight:700;font-family:var(--mono);line-height:1.2;}}
+.whday.tod .wdnum{{color:var(--accent);}}
+.whday.sun .wdow,.whday.sun .wdnum{{color:#f87171;}}
+.whday.sat .wdow,.whday.sat .wdnum{{color:#60a5fa;}}
+.wbody{{flex:1;display:flex;overflow-y:auto;min-height:0;}}
+.wtimecol{{width:52px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);}}
+.wts{{height:48px;padding:4px 5px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
+.wdaycols{{flex:1;display:grid;grid-template-columns:repeat(7,1fr);}}
+.wdcol{{border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
+.wdcol.tod{{background:var(--today);}}
+.whs{{height:48px;border-bottom:1px solid var(--border);}}
 
-  /* WEEK */
-  .week-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;}}
-  .week-header{{display:grid;grid-template-columns:56px repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
-  .week-header-corner{{padding:10px 0;}}
-  .week-header-day{{padding:8px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;}}
-  .week-header-day:hover{{background:var(--hover);}}
-  .week-dow{{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}}
-  .week-date-num{{font-size:20px;font-weight:700;font-family:var(--mono);line-height:1.2;}}
-  .week-header-day.today-col .week-date-num{{color:var(--accent);}}
-  .week-header-day.sunday-col .week-dow,.week-header-day.sunday-col .week-date-num{{color:#f87171;}}
-  .week-header-day.saturday-col .week-dow,.week-header-day.saturday-col .week-date-num{{color:#60a5fa;}}
-  .week-body{{flex:1;display:flex;overflow-y:auto;}}
-  .week-time-col{{width:56px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);position:sticky;left:0;z-index:2;}}
-  .week-time-slot{{height:48px;padding:4px 6px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
-  .week-day-cols{{flex:1;display:grid;grid-template-columns:repeat(7,1fr);}}
-  .week-day-col{{border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
-  .week-day-col.today-col{{background:var(--today);}}
-  .week-hour-slot{{height:48px;border-bottom:1px solid var(--border);}}
+/* ── day ── */
+.day-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
+.dshdr{{display:flex;border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
+.dtcorner{{width:60px;min-width:60px;flex-shrink:0;padding:8px 4px;font-size:10px;color:var(--text-muted);text-align:center;border-right:1px solid var(--border);}}
+.dsch{{flex:1;min-width:90px;padding:7px 5px;text-align:center;border-right:1px solid var(--border);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+.dbody{{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
+.dtcol{{width:60px;min-width:60px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);}}
+.dts{{height:48px;padding:4px 6px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
+.dts.midnight{{border-top:2px solid var(--accent2);color:var(--accent2);font-weight:700;}}
+.dscols{{flex:1;display:flex;overflow-x:auto;}}
+.dscol{{flex:1;min-width:90px;border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
+.dhs{{height:48px;border-bottom:1px solid var(--border);}}
+.nextzone{{position:absolute;left:0;right:0;background:var(--nextday);border-top:1px dashed var(--accent2);pointer-events:none;z-index:0;}}
+.nowline{{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
+.nowline::before{{content:'';position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#f87171;}}
 
-  /* DAY */
-  .day-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;}}
-  .day-staff-header{{display:flex;border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
-  .day-time-corner{{width:64px;min-width:64px;flex-shrink:0;padding:10px 6px;font-size:10px;color:var(--text-muted);text-align:center;border-right:1px solid var(--border);}}
-  .day-staff-col-header{{flex:1;min-width:100px;padding:8px 6px;text-align:center;border-right:1px solid var(--border);font-weight:600;font-size:12px;white-space:nowrap;}}
-  .day-body{{flex:1;display:flex;overflow-y:auto;position:relative;}}
-  .day-time-col{{width:64px;min-width:64px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);position:sticky;left:0;z-index:2;}}
-  .day-time-slot{{height:48px;padding:4px 8px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
-  .day-time-slot.day-boundary{{border-top:2px solid var(--accent2);color:var(--accent2);font-weight:700;}}
-  .day-staff-cols{{flex:1;display:flex;overflow-x:auto;}}
-  .day-staff-col{{flex:1;min-width:100px;border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
-  .day-hour-slot{{height:48px;border-bottom:1px solid var(--border);}}
-  .next-day-zone{{position:absolute;left:0;right:0;background:var(--next-day);border-top:1px dashed var(--accent2);pointer-events:none;z-index:0;}}
+/* ── shift block ── */
+.sb{{position:absolute;left:2px;right:2px;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;transition:filter .12s;border:1px solid rgba(255,255,255,.1);}}
+.sb:hover{{filter:brightness(1.25);z-index:4;}}
+.sbname{{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+.sbtime{{font-size:9px;opacity:.8;font-family:var(--mono);}}
+.drag-sel{{position:absolute;left:2px;right:2px;background:var(--drag);border:2px dashed var(--accent);border-radius:4px;z-index:10;pointer-events:none;}}
 
-  /* SHIFT BLOCK */
-  .shift-block{{position:absolute;left:2px;right:2px;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;transition:filter .12s;border:1px solid rgba(255,255,255,.1);}}
-  .shift-block:hover{{filter:brightness(1.2);z-index:3;}}
-  .sb-name{{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-  .sb-time{{font-size:9px;opacity:.8;font-family:var(--mono);}}
+/* ── modal ── */
+.ov{{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}}
+.modal{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:400px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.6);animation:mIn .18s ease;}}
+@keyframes mIn{{from{{transform:scale(.93);opacity:0;}}to{{transform:scale(1);opacity:1;}}}}
+.mtitle{{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}}
+.fg{{margin-bottom:12px;}}
+.fl{{display:block;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}}
+.fi,.fsel2{{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--font);transition:border-color .15s;}}
+.fi:focus,.fsel2:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,138,240,.15);}}
+.trow{{display:grid;grid-template-columns:1fr 20px 1fr;align-items:center;gap:6px;}}
+.tsep{{color:var(--text-muted);text-align:center;}}
+.mact{{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}}
+.btn{{flex:1;padding:9px;border-radius:6px;border:none;font-size:13px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s;min-width:80px;}}
+.btn-p{{background:var(--accent);color:#fff;}}.btn-p:hover{{background:#4272d8;}}
+.btn-s{{background:var(--surface2);color:var(--text);border:1px solid var(--border);}}.btn-s:hover{{border-color:var(--accent);color:var(--accent);}}
+.btn-d{{background:var(--danger);color:#fff;flex:0;padding:9px 14px;}}.btn-d:hover{{background:#ef4444;}}
+.btn-add{{background:var(--success);color:#fff;flex:0;padding:9px 14px;white-space:nowrap;}}.btn-add:hover{{background:#22c37e;}}
 
-  /* DRAG */
-  .drag-selection{{position:absolute;left:2px;right:2px;background:var(--drag);border:2px dashed var(--accent);border-radius:4px;z-index:10;pointer-events:none;}}
+/* batch list */
+.batch-list{{max-height:180px;overflow-y:auto;margin-bottom:10px;}}
+.batch-item{{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:12px;border:1px solid var(--border);}}
+.batch-item .bi-label{{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
+.batch-item .bi-del{{color:var(--danger);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11px;border:none;background:transparent;}}
+.batch-item .bi-del:hover{{background:rgba(248,113,113,.15);}}
+.batch-count{{font-size:11px;color:var(--text-muted);margin-bottom:8px;}}
 
-  /* CURRENT TIME LINE */
-  .now-line{{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:5;pointer-events:none;}}
-  .now-line::before{{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:#f87171;}}
+/* detail */
+.dchip{{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;}}
+.drow{{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}}
+.drow:last-child{{border-bottom:none;}}.dicon{{font-size:15px;width:22px;text-align:center;}}
 
-  /* MODAL */
-  .modal-overlay{{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}}
-  .modal{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:modalIn .2s ease;}}
-  @keyframes modalIn{{from{{transform:scale(.92);opacity:0;}}to{{transform:scale(1);opacity:1;}}}}
-  .modal-title{{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;}}
-  .form-group{{margin-bottom:14px;}}
-  .form-label{{display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}}
-  .form-input,.form-select{{width:100%;padding:9px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--font);transition:border-color .15s;}}
-  .form-input:focus,.form-select:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,138,240,.15);}}
-  .time-row{{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;}}
-  .time-sep{{color:var(--text-muted);font-size:16px;text-align:center;}}
-  .modal-actions{{display:flex;gap:10px;margin-top:20px;}}
-  .btn{{flex:1;padding:10px;border-radius:6px;border:none;font-size:13px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s;}}
-  .btn-primary{{background:var(--accent);color:#fff;}}
-  .btn-primary:hover{{background:#4a77e0;box-shadow:0 4px 12px rgba(91,138,240,.4);}}
-  .btn-secondary{{background:var(--surface2);color:var(--text);border:1px solid var(--border);}}
-  .btn-secondary:hover{{border-color:var(--accent);color:var(--accent);}}
-  .btn-danger{{background:var(--danger);color:#fff;flex:0;padding:10px 16px;}}
-  .btn-danger:hover{{background:#ef4444;}}
-  .detail-chip{{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:14px;}}
-  .detail-row{{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}}
-  .detail-row:last-child{{border-bottom:none;}}
-  .detail-icon{{font-size:16px;width:24px;text-align:center;}}
-
-  /* TOAST */
-  .toast{{position:fixed;bottom:20px;right:20px;background:var(--success);color:#fff;padding:12px 20px;border-radius:8px;font-weight:600;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(52,211,153,.4);animation:toastIn .3s ease;max-width:320px;}}
-  .toast.error{{background:var(--danger);box-shadow:0 8px 24px rgba(248,113,113,.4);}}
-  .toast.warn{{background:#f59e0b;box-shadow:0 8px 24px rgba(245,158,11,.4);}}
-  @keyframes toastIn{{from{{transform:translateY(20px);opacity:0;}}to{{transform:translateY(0);opacity:1;}}}}
-  .loading{{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9998;font-size:14px;color:var(--text);gap:10px;}}
-  .spinner{{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}}
-  @keyframes spin{{to{{transform:rotate(360deg);}}}}
+/* toast / loading */
+.toast{{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;animation:tIn .25s ease;max-width:300px;color:#fff;}}
+.toast.ok{{background:var(--success);box-shadow:0 6px 20px rgba(52,211,153,.4);}}
+.toast.err{{background:var(--danger);box-shadow:0 6px 20px rgba(248,113,113,.4);}}
+.toast.warn{{background:var(--warn);box-shadow:0 6px 20px rgba(245,158,11,.4);}}
+@keyframes tIn{{from{{transform:translateY(16px);opacity:0;}}to{{transform:translateY(0);opacity:1;}}}}
+.ldg{{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9998;gap:10px;font-size:13px;color:var(--text);}}
+.spin{{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}}
+@keyframes sp{{to{{transform:rotate(360deg);}}}}
 </style>
 </head>
 <body>
-<div style="display:flex;flex-direction:column;height:100vh;">
-
-  <div class="topbar">
+<div id="app">
+  <div id="topbar">
     <div class="view-tabs">
-      <button class="view-tab active" onclick="setView('day')">日</button>
-      <button class="view-tab" onclick="setView('week')">週</button>
-      <button class="view-tab" onclick="setView('month')">月</button>
+      <button class="vt on"  onclick="setView('day')">日</button>
+      <button class="vt"     onclick="setView('week')">週</button>
+      <button class="vt"     onclick="setView('month')">月</button>
     </div>
-    <div class="nav-group">
-      <button class="nav-btn" onclick="navigate(-1)">&#8249;</button>
-      <div class="period-label" id="period-label"></div>
-      <button class="nav-btn" onclick="navigate(1)">&#8250;</button>
+    <div class="nav-grp">
+      <button class="nb" onclick="nav(-1)">&#8249;</button>
+      <div id="plabel"></div>
+      <button class="nb" onclick="nav(1)">&#8250;</button>
     </div>
     <button class="today-btn" onclick="goToday()">今日</button>
-    <div class="filter-group">
-      <select class="filter-select" id="filter-staff" onchange="renderView()"><option value="">全スタッフ</option></select>
-      <select class="filter-select" id="filter-dept"  onchange="renderView()"><option value="">全部門</option></select>
+    <div class="fgrp">
+      <select class="fsel" id="fstaff" onchange="renderView()"><option value="">全スタッフ</option></select>
+      <select class="fsel" id="fdept"  onchange="renderView()"><option value="">全部門</option></select>
     </div>
   </div>
-
-  <div id="calendar-root"></div>
+  <div id="cal"></div>
 </div>
 
-<!-- REGISTER MODAL -->
-<div class="modal-overlay" id="reg-modal" style="display:none" onclick="if(event.target===this)closeModal()">
+<!-- 登録モーダル（複数シフト対応） -->
+<div class="ov" id="reg-ov" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
-    <div class="modal-title">📋 シフト登録</div>
-    <div class="form-group"><label class="form-label">従業員</label><select class="form-select" id="m-staff"></select></div>
-    <div class="form-group"><label class="form-label">部門</label><select class="form-select" id="m-dept"></select></div>
-    <div class="form-group"><label class="form-label">日付</label><input type="date" class="form-input" id="m-date"></div>
-    <div class="form-group">
-      <label class="form-label">時間</label>
-      <div class="time-row">
-        <input type="time" class="form-input" id="m-start" value="09:00">
-        <div class="time-sep">→</div>
-        <input type="time" class="form-input" id="m-end" value="18:00">
+    <div class="mtitle">📋 シフト登録
+      <span id="reg-mode-label" style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:4px;"></span>
+    </div>
+
+    <!-- 入力フォーム -->
+    <div class="fg"><label class="fl">従業員</label><select class="fsel2" id="m-staff"></select></div>
+    <div class="fg"><label class="fl">部門</label><select class="fsel2" id="m-dept"></select></div>
+    <div class="fg"><label class="fl">日付</label><input type="date" class="fi" id="m-date"></div>
+    <div class="fg">
+      <label class="fl">時間</label>
+      <div class="trow">
+        <input type="time" class="fi" id="m-start" value="09:00">
+        <div class="tsep">→</div>
+        <input type="time" class="fi" id="m-end" value="18:00">
       </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveShift()">保存</button>
+
+    <!-- キューリスト -->
+    <div id="batch-section" style="display:none">
+      <div class="batch-count" id="batch-count"></div>
+      <div class="batch-list" id="batch-list"></div>
+    </div>
+
+    <div class="mact">
+      <button class="btn btn-s" onclick="closeReg()">閉じる</button>
+      <button class="btn btn-add" onclick="addToBatch()" title="フォームの内容をリストに追加">＋ リストに追加</button>
+      <button class="btn btn-p"  onclick="saveAll()">保存</button>
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
+      💡「リストに追加」で複数件まとめて登録できます。「保存」でリスト全件を一括保存します。
     </div>
   </div>
 </div>
 
-<!-- DETAIL MODAL -->
-<div class="modal-overlay" id="detail-modal" style="display:none" onclick="if(event.target===this)closeDetail()">
+<!-- 詳細モーダル -->
+<div class="ov" id="det-ov" style="display:none" onclick="if(event.target===this)closeDet()">
   <div class="modal">
-    <div class="modal-title">📌 シフト詳細</div>
-    <div id="detail-content"></div>
-    <div class="modal-actions" style="margin-top:16px">
-      <button class="btn btn-secondary" onclick="closeDetail()">閉じる</button>
-      <button class="btn btn-danger" onclick="deleteShift()">削除</button>
+    <div class="mtitle">📌 シフト詳細</div>
+    <div id="det-body"></div>
+    <div class="mact" style="margin-top:14px">
+      <button class="btn btn-s" onclick="closeDet()">閉じる</button>
+      <button class="btn btn-d" onclick="delShift()">削除</button>
     </div>
   </div>
 </div>
 
 <script>
-const GAS_URL    = "{gas_url}";
-const STAFF_LIST = {staff_json};
-const DEPT_LIST  = {dept_json};
-let   SHIFTS     = {shifts_json_str};
+// ═══ DATA ═══════════════════════════════
+const GAS   = "{gas_url}";
+const STAFF = {staff_json};
+const DEPTS = {dept_json};
+let   SHIFTS = {shifts_json_str};
+const CLRS = {color_palette};
 
-const COLORS = {color_palette};
-
-function getDeptColor(dept) {{
-  const i = DEPT_LIST.indexOf(dept);
-  if (i >= 0) return COLORS[i % COLORS.length];
-  let h = 0; for (let c of dept) h = (h*31+c.charCodeAt(0))&0xffffffff;
-  return COLORS[Math.abs(h) % COLORS.length];
+function deptColor(d){{
+  const i=DEPTS.indexOf(d);
+  if(i>=0) return CLRS[i%CLRS.length];
+  let h=0; for(const c of d) h=(h*31+c.charCodeAt(0))&0x7fffffff;
+  return CLRS[h%CLRS.length];
 }}
-function hexToRgba(hex, a) {{
+function rgba(hex,a){{
   return `rgba(${{parseInt(hex.slice(1,3),16)}},${{parseInt(hex.slice(3,5),16)}},${{parseInt(hex.slice(5,7),16)}},${{a}})`;
 }}
 
-// STATE
-let currentView = 'day';
-let currentDate = new Date(); currentDate.setHours(0,0,0,0);
+// ═══ CONSTANTS ═══════════════════════════
+const DAYS=['日','月','火','水','木','金','土'];
+const MONS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const HPX=48, DAY_H=30, MID_H=24; // 日ビュー: 30h, 深夜境界=24
 
-// Day view constants: 0:00〜翌6:00（30時間）
-const DAY_START_H = 0;
-const DAY_END_H   = 30;   // 翌6時 = hour index 30
-const DAY_HOURS   = 30;
-const MIDNIGHT_H  = 24;   // 翌0時の区切り
-const HOUR_PX     = 48;
+// ═══ STATE ════════════════════════════════
+let view='day';
+let cur=new Date(); cur.setHours(0,0,0,0);
+let batchQueue=[]; // 複数シフト登録キュー
 
-// INIT
-window.onload = () => {{
-  ['filter-staff','m-staff'].forEach(id => STAFF_LIST.forEach(s => document.getElementById(id).appendChild(new Option(s,s))));
-  ['filter-dept', 'm-dept' ].forEach(id => DEPT_LIST.forEach(d => document.getElementById(id).appendChild(new Option(d,d))));
+// ═══ INIT ════════════════════════════════
+window.onload=()=>{{
+  ['fstaff','m-staff'].forEach(id=>STAFF.forEach(s=>$$(id).appendChild(new Option(s,s))));
+  ['fdept', 'm-dept' ].forEach(id=>DEPTS.forEach(d=>$$(id).appendChild(new Option(d,d))));
   renderView();
 }};
 
-// VIEW CONTROL
-function setView(v) {{
-  currentView = v;
-  document.querySelectorAll('.view-tab').forEach((el,i) => el.classList.toggle('active', ['day','week','month'][i]===v));
-  renderView();
-}}
-function navigate(dir) {{
-  if (currentView==='day')        currentDate.setDate(currentDate.getDate()+dir);
-  else if (currentView==='week')  currentDate.setDate(currentDate.getDate()+dir*7);
-  else                            currentDate.setMonth(currentDate.getMonth()+dir);
-  renderView();
-}}
-function goToday() {{ currentDate=new Date(); currentDate.setHours(0,0,0,0); renderView(); }}
-function getFilteredShifts() {{
-  const fs=document.getElementById('filter-staff')?.value||'';
-  const fd=document.getElementById('filter-dept')?.value||'';
+function $$(id){{return document.getElementById(id);}}
+function mk(t,c){{const e=document.createElement(t);if(c)e.className=c;return e;}}
+function fmt(d){{return`${{d.getFullYear()}}-${{p2(d.getMonth()+1)}}-${{p2(d.getDate())}}`;}}
+function p2(n){{return String(n).padStart(2,'0');}}
+function today(){{return fmt(new Date());}}
+function pd(s){{return new Date(s);}}
+function m2t(m){{const mm=m%1440;return`${{p2(Math.floor(mm/60))}}:${{p2(mm%60)}}`;}}
+function shOn(ds,arr){{return arr.filter(s=>s.start&&fmt(pd(s.start))===ds);}}
+function filtered(){{
+  const fs=$$('fstaff')?.value||'',fd=$$('fdept')?.value||'';
   return SHIFTS.filter(s=>(!fs||s.staff===fs)&&(!fd||s.dept===fd));
 }}
-function renderView() {{
-  if (currentView==='day') renderDay();
-  else if (currentView==='week') renderWeek();
+
+// ═══ VIEW ════════════════════════════════
+function setView(v){{
+  view=v;
+  document.querySelectorAll('.vt').forEach((e,i)=>e.classList.toggle('on',['day','week','month'][i]===v));
+  renderView();
+}}
+function nav(d){{
+  if(view==='day')       cur.setDate(cur.getDate()+d);
+  else if(view==='week') cur.setDate(cur.getDate()+d*7);
+  else                   cur.setMonth(cur.getMonth()+d);
+  renderView();
+}}
+function goToday(){{cur=new Date();cur.setHours(0,0,0,0);renderView();}}
+function renderView(){{
+  if(view==='day') renderDay();
+  else if(view==='week') renderWeek();
   else renderMonth();
 }}
 
-// DATE UTILS
-const DAYS_JP=['日','月','火','水','木','金','土'];
-const MONTHS_JP=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-function fmt(d) {{ return `${{d.getFullYear()}}-${{String(d.getMonth()+1).padStart(2,'0')}}-${{String(d.getDate()).padStart(2,'0')}}`; }}
-function todayStr() {{ return fmt(new Date()); }}
-function parseD(s) {{ return new Date(s); }}
-function shiftsOn(ds, shifts) {{ return shifts.filter(s=>s.start&&fmt(parseD(s.start))===ds); }}
-function minsToTime(m) {{ const mm=m%1440; return `${{String(Math.floor(mm/60)).padStart(2,'0')}}:${{String(mm%60).padStart(2,'0')}}`; }}
-function mk(tag, cls, extra) {{ const e=document.createElement(tag); if(cls)e.className=cls; if(extra)Object.assign(e,extra); return e; }}
-
-// ===== MONTH =====
-function renderMonth() {{
-  const y=currentDate.getFullYear(), mo=currentDate.getMonth();
-  document.getElementById('period-label').textContent=`${{y}}年 ${{MONTHS_JP[mo]}}`;
-  const first=new Date(y,mo,1), sdow=first.getDay(), dim=new Date(y,mo+1,0).getDate(), prev=new Date(y,mo,0).getDate();
-  const today=todayStr(), fil=getFilteredShifts();
+// ═══ MONTH ═══════════════════════════════
+function renderMonth(){{
+  const y=cur.getFullYear(),mo=cur.getMonth();
+  $$('plabel').textContent=`${{y}}年 ${{MONS[mo]}}`;
+  const td=today(), fil=filtered();
+  const first=new Date(y,mo,1),sdow=first.getDay(),dim=new Date(y,mo+1,0).getDate(),prev=new Date(y,mo,0).getDate();
   let cells=[];
-  for(let i=sdow-1;i>=0;i--) cells.push({{day:prev-i,month:mo-1,year:y,other:true}});
-  for(let d=1;d<=dim;d++) cells.push({{day:d,month:mo,year:y,other:false}});
-  while(cells.length<42) cells.push({{day:cells.length-dim-sdow+1,month:mo+1,year:y,other:true}});
-  const rows=[]; for(let r=0;r<6;r++) rows.push(cells.slice(r*7,r*7+7));
+  for(let i=sdow-1;i>=0;i--) cells.push({{d:prev-i,m:mo-1,y,o:true}});
+  for(let d=1;d<=dim;d++) cells.push({{d,m:mo,y,o:false}});
+  while(cells.length<42) cells.push({{d:cells.length-dim-sdow+1,m:mo+1,y,o:true}});
 
-  const root=document.getElementById('calendar-root'); root.innerHTML='';
+  const root=$$('cal'); root.innerHTML='';
   const mv=mk('div','month-view');
-  const mh=mk('div','month-header');
-  DAYS_JP.forEach(d=>{{ const c=mk('div','month-header-cell'); c.textContent=d; mh.appendChild(c); }});
+  const mh=mk('div','mhdr');
+  DAYS.forEach(d=>{{const c=mk('div','mhc');c.textContent=d;mh.appendChild(c);}});
   mv.appendChild(mh);
-  const mg=mk('div','month-grid');
-  rows.forEach(row=>{{
-    const mr=mk('div','month-row');
-    row.forEach(cell=>{{
-      const cd=new Date(cell.year,cell.month,cell.day), ds=fmt(cd), dow=cd.getDay();
-      const mc=mk('div','month-cell'+(cell.other?' other-month':'')+(ds===today?' today':'')+(dow===0?' sunday':dow===6?' saturday':''));
-      const dn=mk('div','day-num'); dn.textContent=cell.day; mc.appendChild(dn);
-      const ds_shifts=shiftsOn(ds,fil);
-      ds_shifts.slice(0,3).forEach(s=>{{
-        const col=getDeptColor(s.dept), chip=mk('div','month-shift-chip');
-        chip.style.cssText=`background:${{hexToRgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
-        const st=parseD(s.start),et=parseD(s.end);
-        chip.textContent=`${{s.staff}} ${{String(st.getHours()).padStart(2,'0')}}:${{String(st.getMinutes()).padStart(2,'0')}}-${{String(et.getHours()).padStart(2,'0')}}:${{String(et.getMinutes()).padStart(2,'0')}}`;
-        chip.onclick=e=>{{e.stopPropagation();showDetail(s);}};
-        mc.appendChild(chip);
+  const mg=mk('div','mgrid');
+  for(let r=0;r<6;r++){{
+    const row=mk('div','mrow');
+    cells.slice(r*7,r*7+7).forEach(cell=>{{
+      const cd=new Date(cell.y,cell.m,cell.d),ds=fmt(cd),dow=cd.getDay();
+      const mc=mk('div',`mcell${{cell.o?' other':''}}${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}`);
+      const dn=mk('div','dnum'); dn.textContent=cell.d; mc.appendChild(dn);
+      const ss=shOn(ds,fil);
+      ss.slice(0,3).forEach(s=>{{
+        const col=deptColor(s.dept),ch=mk('div','mchip');
+        ch.style.cssText=`background:${{rgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
+        const st=pd(s.start),et=pd(s.end);
+        ch.textContent=`${{s.staff}} ${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
+        ch.onclick=e=>{{e.stopPropagation();showDet(s);}};
+        mc.appendChild(ch);
       }});
-      if(ds_shifts.length>3){{const m=mk('div','month-more');m.textContent=`+${{ds_shifts.length-3}}件`;mc.appendChild(m);}}
-      mc.onclick=()=>openRegModal(ds);
-      mr.appendChild(mc);
+      if(ss.length>3){{const mm=mk('div','mmore');mm.textContent=`+${{ss.length-3}}件`;mc.appendChild(mm);}}
+      mc.onclick=()=>openReg(ds);
+      row.appendChild(mc);
     }});
-    mg.appendChild(mr);
-  }});
+    mg.appendChild(row);
+  }}
   mv.appendChild(mg); root.appendChild(mv);
 }}
 
-// ===== WEEK =====
-function getWeekStart(d) {{ const r=new Date(d); r.setDate(r.getDate()-r.getDay()); return r; }}
-function renderWeek() {{
-  const ws=getWeekStart(currentDate), we=new Date(ws); we.setDate(we.getDate()+6);
+// ═══ WEEK ════════════════════════════════
+function wkStart(d){{const r=new Date(d);r.setDate(r.getDate()-r.getDay());return r;}}
+function renderWeek(){{
+  const ws=wkStart(cur),we=new Date(ws);we.setDate(we.getDate()+6);
   const [y1,m1,d1]=[ws.getFullYear(),ws.getMonth()+1,ws.getDate()];
   const [y2,m2,d2]=[we.getFullYear(),we.getMonth()+1,we.getDate()];
-  document.getElementById('period-label').textContent=y1===y2?`${{y1}}年${{m1}}/${{d1}} - ${{m2}}/${{d2}}`:`${{y1}}/${{m1}}/${{d1}} - ${{y2}}/${{m2}}/${{d2}}`;
-  const today=todayStr(), fil=getFilteredShifts();
-  const root=document.getElementById('calendar-root'); root.innerHTML='';
+  $$('plabel').textContent=y1===y2?`${{y1}}年${{m1}}/${{d1}}-${{m2}}/${{d2}}`:`${{y1}}/${{m1}}/${{d1}}-${{y2}}/${{m2}}/${{d2}}`;
+  const td=today(),fil=filtered();
+  const root=$$('cal'); root.innerHTML='';
   const wv=mk('div','week-view');
-  const wh=mk('div','week-header'); wh.appendChild(mk('div','week-header-corner'));
+  const wh=mk('div','whdr'); wh.appendChild(mk('div','whcorner'));
   for(let i=0;i<7;i++){{
-    const d=new Date(ws); d.setDate(d.getDate()+i);
+    const d=new Date(ws);d.setDate(d.getDate()+i);
     const ds=fmt(d),dow=d.getDay();
-    const hd=mk('div','week-header-day'+(ds===today?' today-col':'')+(dow===0?' sunday-col':dow===6?' saturday-col':''));
-    hd.innerHTML=`<div class="week-dow">${{DAYS_JP[dow]}}</div><div class="week-date-num">${{d.getDate()}}</div>`;
-    hd.onclick=()=>{{currentDate=new Date(d);setView('day');}};
+    const hd=mk('div',`whday${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}`);
+    hd.innerHTML=`<div class="wdow">${{DAYS[dow]}}</div><div class="wdnum">${{d.getDate()}}</div>`;
+    hd.onclick=()=>{{cur=new Date(d);setView('day');}};
     wh.appendChild(hd);
   }}
   wv.appendChild(wh);
-  const wb=mk('div','week-body');
-  const tc=mk('div','week-time-col');
-  for(let h=0;h<24;h++){{const ts=mk('div','week-time-slot');ts.textContent=h>0?String(h).padStart(2,'0')+':00':'';tc.appendChild(ts);}}
+  const wb=mk('div','wbody');
+  const tc=mk('div','wtimecol');
+  for(let h=0;h<24;h++){{const ts=mk('div','wts');ts.textContent=h?p2(h)+':00':'';tc.appendChild(ts);}}
   wb.appendChild(tc);
-  const dc=mk('div','week-day-cols');
+  const dc=mk('div','wdaycols');
   for(let i=0;i<7;i++){{
-    const d=new Date(ws); d.setDate(d.getDate()+i);
+    const d=new Date(ws);d.setDate(d.getDate()+i);
     const ds=fmt(d),dow=d.getDay();
-    const col=mk('div','week-day-col'+(ds===today?' today-col':''));
-    for(let h=0;h<24;h++) col.appendChild(mk('div','week-hour-slot'));
-    setupDragWeek(col,ds,null);
-    shiftsOn(ds,fil).forEach(s=>col.appendChild(makeBlock(s,true,false,0)));
+    const col=mk('div',`wdcol${{ds===td?' tod':''}}`);
+    for(let h=0;h<24;h++) col.appendChild(mk('div','whs'));
+    dragWeek(col,ds);
+    shOn(ds,fil).forEach(s=>col.appendChild(block(s,true,0)));
     dc.appendChild(col);
   }}
-  wb.appendChild(dc); wv.appendChild(wb); root.appendChild(wv);
+  wb.appendChild(dc);wv.appendChild(wb);root.appendChild(wv);
 }}
 
-// ===== DAY VIEW（0:00〜翌6:00）=====
-function renderDay() {{
-  const y=currentDate.getFullYear(),mo=currentDate.getMonth()+1,d=currentDate.getDate(),dow=currentDate.getDay();
-  document.getElementById('period-label').textContent=`${{y}}年${{mo}}月${{d}}日（${{DAYS_JP[dow]}}）`;
-  const ds=fmt(currentDate);
-  const nextDate=new Date(currentDate); nextDate.setDate(nextDate.getDate()+1);
-  const dsNext=fmt(nextDate);
-  const today=todayStr(), fil=getFilteredShifts();
-  const fsVal=document.getElementById('filter-staff')?.value||'';
-  const staffShow=fsVal?[fsVal]:STAFF_LIST;
-  const root=document.getElementById('calendar-root'); root.innerHTML='';
+// ═══ DAY ═════════════════════════════════
+function renderDay(){{
+  const y=cur.getFullYear(),mo=cur.getMonth()+1,d=cur.getDate(),dow=cur.getDay();
+  $$('plabel').textContent=`${{y}}年${{mo}}月${{d}}日（${{DAYS[dow]}}）`;
+  const ds=fmt(cur),td=today(),fil=filtered();
+  const nxt=new Date(cur);nxt.setDate(nxt.getDate()+1);const dsN=fmt(nxt);
+  const fsv=$$('fstaff')?.value||'';
+  const staff=fsv?[fsv]:STAFF;
+  const root=$$('cal'); root.innerHTML='';
 
-  if(!staffShow.length){{root.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-muted)">スタッフを登録してください</div>';return;}}
+  // スタッフ未登録でも「クリックで登録」できるメッセージ表示
+  if(!staff.length){{
+    root.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:12px;"><div style="font-size:32px">👥</div><div>スタッフを登録してください</div></div>';
+    return;
+  }}
 
   const dv=mk('div','day-view');
-  const sh=mk('div','day-staff-header');
-  const corn=mk('div','day-time-corner');
-  corn.innerHTML=ds===today?'<span style="color:var(--accent);font-weight:700">今日</span>':'';
+  // ヘッダー
+  const sh=mk('div','dshdr');
+  const corn=mk('div','dtcorner');
+  corn.innerHTML=ds===td?'<span style="color:var(--accent);font-weight:700;font-size:11px">今日</span>':'';
   sh.appendChild(corn);
-  staffShow.forEach(st=>{{const h=mk('div','day-staff-col-header');h.textContent=st;sh.appendChild(h);}});
+  staff.forEach(s=>{{const h=mk('div','dsch');h.textContent=s;sh.appendChild(h);}});
   dv.appendChild(sh);
 
-  const db=mk('div','day-body');
-
-  // 時間列（30時間分）
-  const tc=mk('div','day-time-col');
-  for(let h=DAY_START_H;h<DAY_END_H;h++){{
-    const ts=mk('div','day-time-slot'+(h===MIDNIGHT_H?' day-boundary':''));
+  // ボディ
+  const db=mk('div','dbody');
+  const tc=mk('div','dtcol');
+  for(let h=0;h<DAY_H;h++){{
+    const ts=mk('div','dts'+(h===MID_H?' midnight':''));
     if(h===0) ts.textContent='';
-    else if(h===MIDNIGHT_H) ts.textContent='翌 00:00';
-    else if(h>MIDNIGHT_H) ts.textContent=String(h-24).padStart(2,'0')+':00';
-    else ts.textContent=String(h).padStart(2,'0')+':00';
+    else if(h===MID_H) ts.textContent='翌0:00';
+    else if(h>MID_H) ts.textContent=p2(h-24)+':00';
+    else ts.textContent=p2(h)+':00';
     tc.appendChild(ts);
   }}
   db.appendChild(tc);
 
-  const sc=mk('div','day-staff-cols');
-  const midPx=MIDNIGHT_H*HOUR_PX;
-
-  staffShow.forEach(staff=>{{
-    const col=mk('div','day-staff-col');
-    for(let h=0;h<DAY_HOURS;h++) col.appendChild(mk('div','day-hour-slot'));
-
+  const sc=mk('div','dscols');
+  staff.forEach(s=>{{
+    const col=mk('div','dscol');
+    for(let h=0;h<DAY_H;h++) col.appendChild(mk('div','dhs'));
     // 翌日ゾーン背景
-    const nz=mk('div','next-day-zone');
-    nz.style.top=midPx+'px'; nz.style.bottom='0';
+    const nz=mk('div','nextzone');
+    nz.style.top=MID_H*HPX+'px';nz.style.bottom='0';
     col.appendChild(nz);
-
-    setupDragDay(col, ds, dsNext, staff);
-
+    dragDay(col,ds,dsN,s);
     // 当日シフト
-    fil.filter(s=>s.staff===staff&&s.start&&fmt(parseD(s.start))===ds)
-       .forEach(s=>col.appendChild(makeBlock(s,false,false,0)));
-    // 翌日シフト（0:00〜6:00）→ +1440分オフセット
-    fil.filter(s=>s.staff===staff&&s.start&&fmt(parseD(s.start))===dsNext)
-       .forEach(s=>{{
-         const st=parseD(s.start), et=parseD(s.end);
-         const sh=st.getHours(), eh=et.getHours();
-         // 翌日6時以前のシフトだけ表示（夜勤帯）
-         if(sh < (DAY_END_H - MIDNIGHT_H)) col.appendChild(makeBlock(s,false,true,1440));
+    fil.filter(x=>x.staff===s&&x.start&&fmt(pd(x.start))===ds)
+       .forEach(x=>col.appendChild(block(x,false,0)));
+    // 翌日0-6時シフト
+    fil.filter(x=>x.staff===s&&x.start&&fmt(pd(x.start))===dsN)
+       .forEach(x=>{{
+         const h=pd(x.start).getHours();
+         if(h<(DAY_H-MID_H)) col.appendChild(block(x,false,1440));
        }});
-
     sc.appendChild(col);
   }});
-  db.appendChild(sc); dv.appendChild(db); root.appendChild(dv);
+  db.appendChild(sc);dv.appendChild(db);root.appendChild(dv);
 
   // 現在時刻ライン
-  const now=new Date(), diffMins=(now-currentDate)/60000;
-  if(diffMins>=0 && diffMins<DAY_HOURS*60) {{
-    const line=mk('div','now-line');
-    line.style.cssText=`position:absolute;left:64px;right:0;top:${{diffMins/60*HOUR_PX}}px;height:2px;background:#f87171;z-index:5;pointer-events:none;`;
-    db.style.position='relative';
-    db.appendChild(line);
+  const now=new Date(),diff=(now-cur)/60000;
+  if(diff>=0&&diff<DAY_H*60){{
+    const nl=mk('div','nowline');
+    nl.style.cssText=`top:${{diff/60*HPX}}px;left:60px;right:0;`;
+    db.appendChild(nl);
   }}
 }}
 
-// ===== SHIFT BLOCK =====
-function makeBlock(shift, showStaff, isNext, offsetMins) {{
-  const st=parseD(shift.start), et=parseD(shift.end);
-  let sm=st.getHours()*60+st.getMinutes()+offsetMins;
-  let em=et.getHours()*60+et.getMinutes()+offsetMins;
-  const top=(sm/60)*HOUR_PX;
-  const h=Math.max(((em-sm)/60)*HOUR_PX, 16);
-  const col=getDeptColor(shift.dept);
-  const b=mk('div','shift-block');
-  b.style.cssText=`top:${{top}}px;height:${{h}}px;background:${{hexToRgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};`;
-  const nm=mk('div','sb-name'); nm.textContent=showStaff?shift.staff:shift.dept; b.appendChild(nm);
-  if(h>28){{const tm=mk('div','sb-time');tm.textContent=`${{String(st.getHours()).padStart(2,'0')}}:${{String(st.getMinutes()).padStart(2,'0')}} - ${{String(et.getHours()).padStart(2,'0')}}:${{String(et.getMinutes()).padStart(2,'0')}}`;b.appendChild(tm);}}
-  b.onclick=e=>{{e.stopPropagation();showDetail(shift);}};
+// ═══ SHIFT BLOCK ═════════════════════════
+function block(s,showStaff,offsetMins){{
+  const st=pd(s.start),et=pd(s.end);
+  const sm=st.getHours()*60+st.getMinutes()+offsetMins;
+  const em=et.getHours()*60+et.getMinutes()+offsetMins;
+  const top=sm/60*HPX, ht=Math.max((em-sm)/60*HPX,16);
+  const col=deptColor(s.dept);
+  const b=mk('div','sb');
+  b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};`;
+  const nm=mk('div','sbname');nm.textContent=showStaff?s.staff:s.dept;b.appendChild(nm);
+  if(ht>28){{const tm=mk('div','sbtime');tm.textContent=`${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;b.appendChild(tm);}}
+  b.onclick=e=>{{e.stopPropagation();showDet(s);}};
   return b;
 }}
 
-// ===== DRAG =====
-let dragState=null;
-function yToMins(y) {{ return y/HOUR_PX*60; }}
-function snap(m) {{ return Math.round(m/15)*15; }}
-
-function setupDragWeek(col, dateStr, staff) {{
+// ═══ DRAG ════════════════════════════════
+let ds=null;
+function y2m(y){{return y/HPX*60;}}
+function snap(m){{return Math.round(m/15)*15;}}
+function dragWeek(col,dateStr){{
   let el=null;
   col.addEventListener('mousedown',e=>{{
-    if(e.button||e.target.classList.contains('shift-block')) return; e.preventDefault();
-    const y=e.clientY-col.getBoundingClientRect().top+col.scrollTop;
-    const sm=snap(yToMins(y));
-    el=mk('div','drag-selection'); el.style.top=sm/60*HOUR_PX+'px'; el.style.height='0'; col.appendChild(el);
-    dragState={{col,dateStr,staff,sm,em:sm,el}};
+    if(e.button||e.target.classList.contains('sb')) return; e.preventDefault();
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.wbody')?.scrollTop||0);
+    const sm=snap(y2m(y));
+    el=mk('div','drag-sel');el.style.top=sm/60*HPX+'px';el.style.height='0';col.appendChild(el);
+    ds={{col,date:dateStr,staff:null,sm,em:sm,el}};
   }});
   col.addEventListener('mousemove',e=>{{
-    if(!dragState||dragState.col!==col) return;
-    const em=snap(yToMins(e.clientY-col.getBoundingClientRect().top+col.scrollTop));
-    el.style.top=Math.min(dragState.sm,em)/60*HOUR_PX+'px';
-    el.style.height=Math.abs(em-dragState.sm)/60*HOUR_PX+'px';
-    dragState.em=em;
+    if(!ds||ds.col!==col)return;
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.wbody')?.scrollTop||0);
+    const em=snap(y2m(y));
+    el.style.top=Math.min(ds.sm,em)/60*HPX+'px';el.style.height=Math.abs(em-ds.sm)/60*HPX+'px';
+    ds.em=em;
   }});
   col.addEventListener('mouseup',()=>{{
-    if(!dragState||dragState.col!==col) return;
-    const s=Math.min(dragState.sm,dragState.em), en=Math.max(dragState.sm,dragState.em);
-    el.remove(); dragState=null;
-    openRegModal(dateStr,minsToTime(s),minsToTime(en-s<15?s+60:en),staff);
+    if(!ds||ds.col!==col)return;
+    const s=Math.min(ds.sm,ds.em),en=Math.max(ds.sm,ds.em);
+    el.remove();const d=ds.date;ds=null;
+    openReg(d,m2t(s),m2t(en-s<15?s+60:en));
   }});
 }}
-
-function setupDragDay(col, ds, dsNext, staff) {{
+function dragDay(col,dateStr,dateStrN,staffName){{
   let el=null;
   col.addEventListener('mousedown',e=>{{
-    if(e.button||e.target.classList.contains('shift-block')) return; e.preventDefault();
-    const y=e.clientY-col.getBoundingClientRect().top+col.scrollTop;
-    const sm=Math.min(snap(yToMins(y)), DAY_HOURS*60);
-    el=mk('div','drag-selection'); el.style.top=sm/60*HOUR_PX+'px'; el.style.height='0'; col.appendChild(el);
-    dragState={{col,ds,dsNext,staff,sm,em:sm,el,day:true}};
+    if(e.button||e.target.classList.contains('sb')) return; e.preventDefault();
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.dbody')?.scrollTop||0);
+    const sm=Math.min(snap(y2m(y)),DAY_H*60);
+    el=mk('div','drag-sel');el.style.top=sm/60*HPX+'px';el.style.height='0';col.appendChild(el);
+    ds={{col,date:dateStr,dateN:dateStrN,staff:staffName,sm,em:sm,el}};
   }});
   col.addEventListener('mousemove',e=>{{
-    if(!dragState||dragState.col!==col) return;
-    const em=Math.min(snap(yToMins(e.clientY-col.getBoundingClientRect().top+col.scrollTop)),DAY_HOURS*60);
-    el.style.top=Math.min(dragState.sm,em)/60*HOUR_PX+'px';
-    el.style.height=Math.abs(em-dragState.sm)/60*HOUR_PX+'px';
-    dragState.em=em;
+    if(!ds||ds.col!==col)return;
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.dbody')?.scrollTop||0);
+    const em=Math.min(snap(y2m(y)),DAY_H*60);
+    el.style.top=Math.min(ds.sm,em)/60*HPX+'px';el.style.height=Math.abs(em-ds.sm)/60*HPX+'px';
+    ds.em=em;
   }});
   col.addEventListener('mouseup',()=>{{
-    if(!dragState||dragState.col!==col) return;
-    const s=Math.min(dragState.sm,dragState.em), en=Math.max(dragState.sm,dragState.em);
-    el.remove();
-    const isNext=s>=1440;
-    const actualDate=isNext?dragState.dsNext:dragState.ds;
-    dragState=null;
-    openRegModal(actualDate,minsToTime(s),minsToTime(en-s<15?s+60:en),staff);
+    if(!ds||ds.col!==col)return;
+    const s=Math.min(ds.sm,ds.em),en=Math.max(ds.sm,ds.em);
+    const isN=s>=1440,actualDate=isN?ds.dateN:ds.date,stf=ds.staff;
+    el.remove();ds=null;
+    openReg(actualDate,m2t(s),m2t(en-s<15?s+60:en),stf);
   }});
 }}
+document.addEventListener('mouseup',()=>{{if(ds?.el)ds.el.remove();ds=null;}});
 
-document.addEventListener('mouseup',()=>{{ if(dragState?.el) dragState.el.remove(); dragState=null; }});
-
-// ===== MODAL =====
-function openRegModal(dateStr, s, e, staff) {{
-  document.getElementById('m-date').value=dateStr||fmt(currentDate);
-  document.getElementById('m-start').value=s||'09:00';
-  document.getElementById('m-end').value=e||'18:00';
-  if(staff){{ const sel=document.getElementById('m-staff'); for(let o of sel.options) if(o.value===staff){{sel.value=staff;break;}} }}
-  document.getElementById('reg-modal').style.display='flex';
+// ═══ REGISTER MODAL（複数シフト対応）═════
+function openReg(dateStr,startT,endT,staffName){{
+  $$('m-date').value=dateStr||fmt(cur);
+  $$('m-start').value=startT||'09:00';
+  $$('m-end').value=endT||'18:00';
+  if(staffName){{
+    const sel=$$('m-staff');
+    for(const o of sel.options) if(o.value===staffName){{sel.value=staffName;break;}}
+  }}
+  renderBatchUI();
+  $$('reg-ov').style.display='flex';
 }}
-function closeModal() {{ document.getElementById('reg-modal').style.display='none'; }}
+function closeReg(){{
+  $$('reg-ov').style.display='none';
+  batchQueue=[];
+  renderBatchUI();
+}}
 
-async function saveShift() {{
-  const staff=document.getElementById('m-staff').value, dept=document.getElementById('m-dept').value;
-  const date=document.getElementById('m-date').value, s=document.getElementById('m-start').value, e=document.getElementById('m-end').value;
+// バッチキューにフォームの内容を追加
+function addToBatch(){{
+  const staff=$$('m-staff').value,dept=$$('m-dept').value;
+  const date=$$('m-date').value,s=$$('m-start').value,e=$$('m-end').value;
   if(!staff||!dept||!date||!s||!e){{alert('すべて入力してください');return;}}
   if(s>=e){{alert('終了は開始より後にしてください');return;}}
-  closeModal(); showLoading('保存中...');
-  try{{
-    await fetch(`${{GAS_URL}}?`+new URLSearchParams({{action:'add_shift',name:staff,dept,start:`${{date}} ${{s}}`,end:`${{date}} ${{e}}`}}));
-    SHIFTS.push({{rowIndex:-1,staff,dept,start:`${{date}}T${{s}}:00`,end:`${{date}}T${{e}}:00`}});
-    hideLoading(); showToast('✅ シフトを保存しました'); renderView();
-  }}catch(err){{hideLoading();showToast('❌ 保存に失敗しました',true);}}
+  batchQueue.push({{staff,dept,date,start:s,end:e}});
+  renderBatchUI();
+  // フォームのスタッフ・時間はそのまま（次の人を連続入力しやすくする）
+  // 日付だけ維持、スタッフ選択を次の人に進める
+  showToast(`➕ リストに追加: ${{staff}} ${{s}}-${{e}}`,'ok',2000);
 }}
 
-// ===== DETAIL + DELETE =====
-let curShift=null, curIdx=-1;
-function showDetail(shift) {{
-  curShift=shift; curIdx=SHIFTS.indexOf(shift);
-  const st=parseD(shift.start),et=parseD(shift.end),col=getDeptColor(shift.dept);
-  document.getElementById('detail-content').innerHTML=`
-    <span class="detail-chip" style="background:${{hexToRgba(col,.25)}};color:${{col}}">${{shift.dept}}</span>
-    <div class="detail-row"><span class="detail-icon">👤</span><span>${{shift.staff}}</span></div>
-    <div class="detail-row"><span class="detail-icon">📅</span><span>${{fmt(st)}}</span></div>
-    <div class="detail-row"><span class="detail-icon">🕐</span><span>${{String(st.getHours()).padStart(2,'0')}}:${{String(st.getMinutes()).padStart(2,'0')}} → ${{String(et.getHours()).padStart(2,'0')}}:${{String(et.getMinutes()).padStart(2,'0')}}</span></div>
-    <div class="detail-row"><span class="detail-icon">⏱️</span><span>${{Math.round((et-st)/60000)}}分</span></div>`;
-  document.getElementById('detail-modal').style.display='flex';
+function renderBatchUI(){{
+  const sec=$$('batch-section'),list=$$('batch-list'),cnt=$$('batch-count');
+  const lbl=$$('reg-mode-label');
+  if(batchQueue.length===0){{
+    sec.style.display='none';
+    lbl.textContent='';
+    return;
+  }}
+  sec.style.display='block';
+  lbl.textContent=`（キュー: ${{batchQueue.length}}件）`;
+  cnt.textContent=`登録予定: ${{batchQueue.length}} 件`;
+  list.innerHTML='';
+  batchQueue.forEach((item,i)=>{{
+    const row=mk('div','batch-item');
+    const lbl2=mk('div','bi-label');
+    lbl2.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.date}} ${{item.start}}-${{item.end}}`;
+    const del=mk('button','bi-del');
+    del.textContent='✕';del.onclick=()=>{{batchQueue.splice(i,1);renderBatchUI();}};
+    row.appendChild(lbl2);row.appendChild(del);
+    list.appendChild(row);
+  }});
 }}
-function closeDetail() {{ document.getElementById('detail-modal').style.display='none'; curShift=null; }}
 
-async function deleteShift() {{
-  if(!curShift) return;
-  if(!confirm(`${{curShift.staff}} のシフトを削除しますか？`)) return;
-  const s=curShift; closeDetail(); showLoading('削除中...');
+// 保存: キューがあればキュー全件、なければフォーム単体
+async function saveAll(){{
+  let items=[];
+  if(batchQueue.length>0){{
+    items=[...batchQueue];
+  }} else {{
+    const staff=$$('m-staff').value,dept=$$('m-dept').value;
+    const date=$$('m-date').value,s=$$('m-start').value,e=$$('m-end').value;
+    if(!staff||!dept||!date||!s||!e){{alert('すべて入力してください');return;}}
+    if(s>=e){{alert('終了は開始より後にしてください');return;}}
+    items=[{{staff,dept,date,start:s,end:e}}];
+  }}
 
-  // ISO文字列を "YYYY-MM-DD HH:MM" に正規化
-  const norm=iso=>iso.replace('T',' ').replace(/(\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}).*$/,'$1');
-  const startStr=norm(s.start), endStr=norm(s.end);
+  closeReg();
+  showLdg(`${{items.length}}件 保存中...`);
 
-  let ok=false;
-  try{{
-    const res=await fetch(`${{GAS_URL}}?`+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,start:startStr,end:endStr}}));
-    const txt=await res.text();
-    ok=res.ok && (txt.toLowerCase().includes('delet')||txt.toLowerCase().includes('ok')||txt.trim().length===0);
-  }}catch(e){{ console.warn('GAS del_shift error:',e); }}
+  let ok=0,fail=0;
+  for(const item of items){{
+    try{{
+      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,start:`${{item.date}} ${{item.start}}`,end:`${{item.date}} ${{item.end}}`}}));
+      SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,start:`${{item.date}}T${{item.start}}:00`,end:`${{item.date}}T${{item.end}}:00`}});
+      ok++;
+    }}catch{{fail++;}}
+  }}
 
-  // ローカルから除去（GAS結果に関係なく即反映）
-  const i=curIdx>=0 ? curIdx : SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
-  if(i>=0) SHIFTS.splice(i,1);
-
-  hideLoading();
-  if(ok) showToast('🗑️ 削除しました');
-  else   showToast('🗑️ 画面から削除しました\n（GASにdel_shiftが未設定の場合はシートも手動削除してください）','warn');
+  hideLdg();
+  if(fail===0) showToast(`✅ ${{ok}}件 保存しました`,'ok');
+  else showToast(`⚠️ ${{ok}}件成功 / ${{fail}}件失敗`,'warn');
   renderView();
 }}
 
-// ===== HELPERS =====
-function showToast(msg, type='', dur=4000) {{
-  const t=mk('div','toast'+(type?' '+type:'')); t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),dur);
+// ═══ DETAIL + DELETE ════════════════════
+let curS=null,curI=-1;
+function showDet(s){{
+  curS=s;curI=SHIFTS.indexOf(s);
+  const st=pd(s.start),et=pd(s.end),col=deptColor(s.dept);
+  $$('det-body').innerHTML=`
+    <span class="dchip" style="background:${{rgba(col,.25)}};color:${{col}}">${{s.dept}}</span>
+    <div class="drow"><span class="dicon">👤</span><span>${{s.staff}}</span></div>
+    <div class="drow"><span class="dicon">📅</span><span>${{fmt(st)}}</span></div>
+    <div class="drow"><span class="dicon">🕐</span><span>${{p2(st.getHours())}}:${{p2(st.getMinutes())}} → ${{p2(et.getHours())}}:${{p2(et.getMinutes())}}</span></div>
+    <div class="drow"><span class="dicon">⏱️</span><span>${{Math.round((et-st)/60000)}}分</span></div>`;
+  $$('det-ov').style.display='flex';
 }}
-function showLoading(msg='処理中...') {{
-  const l=mk('div','loading'); l.id='loading-overlay';
-  l.innerHTML=`<div class="spinner"></div><span>${{msg}}</span>`; document.body.appendChild(l);
+function closeDet(){{$$('det-ov').style.display='none';curS=null;}}
+async function delShift(){{
+  if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`))return;
+  const s=curS;closeDet();showLdg('削除中...');
+  const norm=iso=>iso.replace('T',' ').replace(/(\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}).*$/,'$1');
+  let ok=false;
+  try{{
+    const r=await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,start:norm(s.start),end:norm(s.end)}}));
+    const t=await r.text();
+    ok=r.ok&&(t.toLowerCase().includes('delet')||t.toLowerCase().includes('ok')||t.trim().length===0);
+  }}catch(e){{console.warn(e);}}
+  const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
+  if(i>=0)SHIFTS.splice(i,1);
+  hideLdg();
+  ok?showToast('🗑️ 削除しました','ok'):showToast('🗑️ 画面から削除（シートはGAS del_shift設定後に連携）','warn');
+  renderView();
 }}
-function hideLoading() {{ document.getElementById('loading-overlay')?.remove(); }}
 
+// ═══ HELPERS ═════════════════════════════
+function showToast(msg,type='ok',dur=3500){{
+  const t=mk('div',`toast ${{type}}`);t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),dur);
+}}
+function showLdg(msg='処理中...'){{
+  const l=mk('div','ldg');l.id='ldg';
+  l.innerHTML=`<div class="spin"></div><span>${{msg}}</span>`;
+  document.body.appendChild(l);
+}}
+function hideLdg(){{$$('ldg')?.remove();}}
 document.addEventListener('keydown',e=>{{
-  if(e.key==='Escape'){{closeModal();closeDetail();}}
-  if(e.key==='ArrowLeft'&&!e.target.matches('input,select')) navigate(-1);
-  if(e.key==='ArrowRight'&&!e.target.matches('input,select')) navigate(1);
+  if(e.key==='Escape'){{closeReg();closeDet();}}
+  if(!e.target.matches('input,select,textarea')){{
+    if(e.key==='ArrowLeft') nav(-1);
+    if(e.key==='ArrowRight') nav(1);
+  }}
 }});
 </script>
 </body>
-</html>
-"""
+</html>"""
 
-    components.html(html_code, height=760, scrolling=False)
+    components.html(html_code, height=COMPONENT_HEIGHT, scrolling=False)
