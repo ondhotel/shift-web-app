@@ -34,13 +34,13 @@ def load_masters():
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=マスター"
     try:
         master_df = pd.read_csv(url)
-        # 空白を除去してリスト化
+        st.write("デバッグ用（列名）:", master_df.columns.tolist()) # これを足すと列名が見える
         staff_list = master_df['従業員リスト'].dropna().tolist()
         dept_list = master_df['部門リスト'].dropna().tolist()
         return staff_list, dept_list
-    except:
-        # 読み込めない場合の予備
-        return ["読み込みエラー"], ["読み込みエラー"]
+    except Exception as e:
+        st.error(f"詳細なエラー: {e}") # ここで何がダメか教えてくれます
+        return ["エラー"], ["エラー"]
 
 # ==========================================
 # 3. メイン画面
