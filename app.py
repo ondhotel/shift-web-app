@@ -44,7 +44,7 @@ df = load_data()
 st.title("職域別・時間割シフト管理")
 
 with st.expander("📝 登録フォーム", expanded=True):
-    with st.form("f"):
+    with st.form("shift_form"):
         c1, c2 = st.columns(2)
         with c1:
             name = st.selectbox("名前", STAFF_MASTER if STAFF_MASTER else ["未設定"])
@@ -70,12 +70,4 @@ if not df.empty:
         fig = px.timeline(p_df, x_start="開始", x_end="終了", y="従業員", color="部門", text="部門")
         fig.update_yaxes(type='category', autorange="reversed")
         fig.update_layout(barmode='group', height=400 + (len(p_df['従業員'].unique()) * 40))
-        st.plotly_chart(fig, use_container_width=True)
-    
-    st.subheader("📋 読み込まれたデータ（確認用）")
-    st.dataframe(df)
-else:
-    st.info("データがありません")
-
-st.sidebar.title("🛠 管理")
-if st.sidebar.button("🔄 更新
+        st.plotly
