@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import urllib.parse
 from datetime import datetime
 
 # ==========================================
@@ -16,30 +17,32 @@ st.set_page_config(layout="wide", page_title="共有シフト管理システム"
 # 2. データの読み込み関数
 # ==========================================
 
-# シフトデータの読み込み
+# --- データの読み込み（修正版） ---
 @st.cache_data(ttl=5)
 def load_data():
-    url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=シフトデータ"
+    sheet_name = urllib.parse.quote("シフトデータ") # 日本語を変換
+    url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     try:
         df = pd.read_csv(url)
         df['開始'] = pd.to_datetime(df['開始'], errors='coerce')
         df['終了'] = pd.to_datetime(df['終了'], errors='coerce')
         return df.dropna(subset=['開始', '終了'])
-    except:
+    except Exception as e:
+        st.error(f"データ読み込み失敗: {e}")
         return pd.DataFrame(columns=["従業員", "部門", "開始", "終了"])
 
-# マスターデータ（従業員・部門）の読み込み
-@st.cache_data(ttl=60) # マスターは頻繁に変わらないので1分間キャッシュ
+# --- マスターデータの読み込み（修正版） ---
+@st.cache_data(ttl=60)
 def load_masters():
-    url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=マスター"
+    sheet_name = urllib.parse.quote("マスター") # 日本語を変換
+    url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     try:
         master_df = pd.read_csv(url)
-        st.write("デバッグ用（列名）:", master_df.columns.tolist()) # これを足すと列名が見える
         staff_list = master_df['従業員リスト'].dropna().tolist()
         dept_list = master_df['部門リスト'].dropna().tolist()
         return staff_list, dept_list
     except Exception as e:
-        st.error(f"詳細なエラー: {e}") # ここで何がダメか教えてくれます
+        st.error(f"マスター読み込み失敗: {e}")
         return ["エラー"], ["エラー"]
 
 # ==========================================
