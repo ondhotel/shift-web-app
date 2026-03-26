@@ -33,7 +33,7 @@ def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: lis
 
     COMPONENT_HEIGHT = 780
 
-    html_code = """<!DOCTYPE html>
+    html_code = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
