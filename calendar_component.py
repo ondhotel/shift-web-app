@@ -349,20 +349,14 @@ function updatePasteBanner(){{
   }}
 }}
 
+# 修正後
 function pasteToDate(dateStr){{
   if(!clipShift) return;
-  const st=pd(clipShift.start), et=pd(clipShift.end);
-  const _staff = clipShift.staff, _dept = clipShift.dept;
-  clipShift = null;            // 状態はリセット
-  updatePasteBanner();          // バナー更新
-  renderView();                 // ← これを追加してビューを更新
-  openReg(
-    dateStr, 
-    `${p2(st.getHours())}:${p2(st.getMinutes())}`, 
-    `${p2(et.getHours())}:${p2(et.getMinutes())}`, 
-    _staff, 
-    _dept
-  );
+  const st=pd(clipShift.start),et=pd(clipShift.end);
+  const _staff=clipShift.staff, _dept=clipShift.dept;
+  clipShift=null;          // キャンセルはするが renderView() は呼ばない
+  updatePasteBanner();
+  openReg(dateStr, `${{p2(st.getHours())}}:${{p2(st.getMinutes())}}`, `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`, _staff, _dept);
 }}
 
 // ═══ MONTH ═══════════════════════════
