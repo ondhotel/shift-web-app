@@ -348,11 +348,14 @@ function updatePasteBanner(){{
     b.style.display='none';
   }}
 }}
+# 修正後
 function pasteToDate(dateStr){{
   if(!clipShift) return;
   const st=pd(clipShift.start),et=pd(clipShift.end);
-  openReg(dateStr, `${{p2(st.getHours())}}:${{p2(st.getMinutes())}}`, `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`, clipShift.staff, clipShift.dept);
-  cancelCopy();
+  const _staff=clipShift.staff, _dept=clipShift.dept;
+  clipShift=null;          // キャンセルはするが renderView() は呼ばない
+  updatePasteBanner();
+  openReg(dateStr, `${{p2(st.getHours())}}:${{p2(st.getMinutes())}}`, `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`, _staff, _dept);
 }}
 
 // ═══ MONTH ═══════════════════════════
