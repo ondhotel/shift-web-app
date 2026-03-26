@@ -67,6 +67,7 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .today-btn:hover{{border-color:var(--accent);color:var(--accent);}}
 .fgrp{{display:flex;gap:8px;margin-left:auto;align-items:center;}}
 .fsel{{padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;}}
+<button class="today-btn" onclick="openBatchFromPaste()">貼り付け確定</button>
 
 /* ペーストモードバナー */
 #paste-banner{{display:none;background:rgba(240,160,91,.18);border:1px solid var(--copy);border-radius:6px;padding:4px 12px;font-size:11px;color:var(--copy);font-weight:600;align-items:center;gap:8px;}}
@@ -348,12 +349,25 @@ function updatePasteBanner(){{
     b.style.display='none';
   }}
 }}
-function pasteToDate(dateStr){{
+function pasteToDate(dateStr){
   if(!clipShift) return;
+
   const st=pd(clipShift.start),et=pd(clipShift.end);
-  openReg(dateStr, `${{p2(st.getHours())}}:${{p2(st.getMinutes())}}`, `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`, clipShift.staff, clipShift.dept);
-  cancelCopy();
-}}
+
+  // ★ モーダル開かずバッチに直接追加
+  batchQueue.push({
+    staff: clipShift.staff,
+    dept: clipShift.dept,
+    date: dateStr,
+    start: `${p2(st.getHours())}:${p2(st.getMinutes())}`,
+    end: `${p2(et.getHours())}:${p2(et.getMinutes())}`
+  });
+
+  showToast(`📋 追加: ${clipShift.staff} ${dateStr}`, 'ok', 1500);
+
+  // ★ コピーは維持（←ここが重要）
+  updatePasteBanner();
+}
 
 // ═══ MONTH ═══════════════════════════
 function renderMonth(){{
@@ -795,6 +809,17 @@ document.addEventListener('keydown',e=>{{
     if(e.key==='ArrowRight') nav(1);
   }}
 }});
+
+function openBatchFromPaste(){
+  if(batchQueue.length===0){
+    showToast('⚠️ 追加されたデータがありません','warn');
+    return;
+  }
+
+  renderBatchUI();
+  document.getElementById('reg-ov').style.display='flex';
+}
+
 </script>
 </body>
 </html>"""
