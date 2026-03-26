@@ -54,7 +54,6 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 #topbar{{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;height:52px;}}
 #cal{{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}}
 
-/* topbar */
 .view-tabs{{display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:2px;}}
 .vt{{padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);border:none;background:transparent;transition:all .15s;font-family:var(--font);}}
 .vt.on{{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(91,138,240,.4);}}
@@ -68,12 +67,9 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .fgrp{{display:flex;gap:8px;margin-left:auto;align-items:center;}}
 .fsel{{padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;}}
 
-/* ペーストモードバナー */
 #paste-banner{{display:none;background:rgba(240,160,91,.25);border:1px solid var(--copy);border-radius:8px;padding:6px 16px;font-size:12px;color:var(--copy);font-weight:600;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}}
 #paste-banner button{{background:var(--surface2);border:1px solid var(--copy);color:var(--copy);border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:var(--font);font-weight:700;}}
-#paste-banner button:hover{{background:var(--copy);color:#000;}}
 
-/* month */
 .month-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
 .mhdr{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);flex-shrink:0;}}
 .mhc{{padding:7px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;}}
@@ -82,45 +78,34 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .mcell{{border-right:1px solid var(--border);padding:5px;cursor:pointer;transition:background .12s;overflow:hidden;min-height:80px;position:relative;}}
 .mcell:hover{{background:var(--hover);}}
 .mcell.paste-target:hover{{background:var(--paste-hover)!important;outline:2px dashed var(--copy);outline-offset:-2px;}}
-.mcell.other{{opacity:.35;}}.mcell.tod{{background:var(--today);}}
 .dnum{{font-size:12px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--mono);margin-bottom:3px;}}
 .tod .dnum{{background:var(--accent);color:#fff;}}
 
 .mchip{{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;position:relative;}}
 .mchip.copied{{outline:2px solid var(--copy);}}
 
-/* week & day */
 .wbody, .dbody {{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
 .whdr, .dshdr {{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
 .whday, .dsch {{padding:7px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;font-weight:600;}}
-.whday.paste-col:hover, .dscol.paste-col:hover{{background:var(--paste-hover)!important;}}
-.wts, .dts {{height:48px;padding:4px 5px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
 .wdcol, .dscol {{border-right:1px solid var(--border);position:relative;cursor:crosshair;min-height:1152px;}}
 .wdcol.paste-col, .dscol.paste-col {{cursor:copy;}}
 
-/* shift block */
 .sb{{position:absolute;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;transition:filter .12s;border:1px solid rgba(255,255,255,.1);}}
 .sb:hover{{filter:brightness(1.25);z-index:4;}}
-.sb.copied{{outline:2px solid var(--copy);box-shadow:0 0 0 3px rgba(240,160,91,.3);z-index:2;}}
-.sbname{{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-.sbtime{{font-size:9px;opacity:.8;font-family:var(--mono);}}
-.drag-sel{{position:absolute;left:2px;right:2px;background:var(--drag);border:2px dashed var(--accent);border-radius:4px;z-index:10;pointer-events:none;}}
 
-/* modal */
 .ov{{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}}
-.modal{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:400px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.6);animation:mIn .18s ease;}}
-@keyframes mIn{{from{{transform:scale(.93);opacity:0;}}to{{transform:scale(1);opacity:1;}}}}
+.modal{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:400px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.6);}}
 .mtitle{{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}}
 .fg{{margin-bottom:12px;}}
 .fl{{display:block;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}}
-.fi,.fsel2{{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--font);transition:border-color .15s;}}
+.fi,.fsel2{{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--font);}}
 .mact{{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}}
 .btn{{flex:1;padding:9px;border-radius:6px;border:none;font-size:13px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s;min-width:80px;}}
 .btn-p{{background:var(--accent);color:#fff;}}
 .btn-s{{background:var(--surface2);color:var(--text);border:1px solid var(--border);}}
 .btn-c{{background:rgba(240,160,91,.2);color:var(--copy);border:1px solid var(--copy);}}
 
-.toast{{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;animation:tIn .25s ease;color:#fff;}}
+.toast{{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;color:#fff;}}
 .toast.ok{{background:var(--success);}}
 .ldg{{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9998;gap:10px;color:var(--text);}}
 .spin{{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}}
@@ -158,7 +143,7 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
     <div class="fg"><label class="fl">日付</label><input type="date" class="fi" id="m-date"></div>
     <div class="fg">
       <label class="fl">時間</label>
-      <div class="trow" style="display:grid;grid-template-columns:1fr 20px 1fr;align-items:center;">
+      <div class="trow" style="display:grid; grid-template-columns:1fr 20px 1fr; align-items:center;">
         <input type="time" class="fi" id="m-start" value="09:00">
         <div style="text-align:center;color:var(--text-muted)">→</div>
         <input type="time" class="fi" id="m-end" value="18:00">
@@ -242,7 +227,6 @@ function renderView(){{
   updatePasteBanner();
 }}
 
-// ═══ COPY / PASTE ════════════════════
 function copyShift(){{
   closeDet();
   clipShift={{...curS}};
@@ -252,10 +236,7 @@ function copyShift(){{
 }}
 
 function cancelCopy(){{
-  clipShift=null;
-  batchQueue=[];
-  updatePasteBanner();
-  renderView();
+  clipShift=null; batchQueue=[]; updatePasteBanner(); renderView();
 }}
 
 function updatePasteBanner(){{
@@ -272,7 +253,7 @@ function updatePasteBanner(){{
         <button onclick="cancelCopy()">中止</button>
       </div>
     `;
-  } else {{
+  }} else {{
     b.style.display='none';
   }}
 }}
@@ -282,20 +263,11 @@ function pasteToDate(dateStr){{
   const s=pd(clipShift.start),et=pd(clipShift.end);
   const startT = `${{p2(s.getHours())}}:${{p2(s.getMinutes())}}`;
   const endT = `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
-  
-  batchQueue.push({{
-    staff: clipShift.staff,
-    dept: clipShift.dept,
-    date: dateStr,
-    start: startT,
-    end: endT
-  }});
-  
+  batchQueue.push({{ staff: clipShift.staff, dept: clipShift.dept, date: dateStr, start: startT, end: endT }});
   updatePasteBanner();
   showToast(`➕ ${{dateStr}} を追加`,'ok',1000);
 }}
 
-// ═══ MONTH ═══════════════════════════
 function renderMonth(){{
   const y=cur.getFullYear(),mo=cur.getMonth();
   $$('plabel').textContent=`${{y}}年 ${{MONS[mo]}}`;
@@ -315,28 +287,23 @@ function renderMonth(){{
   for(let r=0;r<6;r++){{
     const row=mk('div','mrow');
     cells.slice(r*7,r*7+7).forEach(cell=>{{
-      const cd=new Date(cell.y,cell.m,cell.d),ds=fmt(cd),dow=cd.getDay();
+      const cd=new Date(cell.y,cell.m,cell.d),ds=fmt(cd);
       const mc=mk('div',`mcell${{cell.o?' other':''}}${{ds===td?' tod':''}}${{clipShift?' paste-target':''}}`);
       const dn=mk('div','dnum'); dn.textContent=cell.d; mc.appendChild(dn);
       
-      // ★ 修正：ここでclipShiftの有無で挙動を完全に分ける
       mc.onclick=(e)=>{{
         e.stopPropagation();
-        if(clipShift) {{
-           pasteToDate(ds);
-        }} else {{
-           if(!e.target.classList.contains('mchip')) openReg(ds);
-        }}
+        if(clipShift) pasteToDate(ds);
+        else if(!e.target.classList.contains('mchip')) openReg(ds);
       }};
 
-      const dayShifts=shOn(ds,fil);
-      dayShifts.forEach(s=>{{
+      shOn(ds,fil).forEach(s=>{{
           const col=deptColor(s.dept);
           const ch=mk('div','mchip');
           ch.style.cssText=`background:${{rgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
           const st=pd(s.start),et=pd(s.end);
           ch.textContent=`${{s.staff}} ${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
-          ch.onclick=e=>{{e.stopPropagation(); if(!clipShift) showDet(s); else pasteToDate(ds); }};
+          ch.onclick=e=>{{e.stopPropagation(); if(clipShift) pasteToDate(ds); else showDet(s); }};
           mc.appendChild(ch);
       }});
       row.appendChild(mc);
@@ -362,9 +329,7 @@ function renderWeek(){{
     const col=mk('div',`wdcol${{ds===td?' tod':''}}${{clipShift?' paste-col':''}}`);
     col.innerHTML=`<div style="text-align:center;padding:5px;border-bottom:1px solid var(--border);font-weight:700;">${{d.getDate()}}(${{DAYS[i]}})</div>`;
     for(let h=0;h<24;h++) col.appendChild(mk('div','whs'));
-    
     col.onclick=()=>{{ if(clipShift) pasteToDate(ds); else openReg(ds); }};
-
     shOn(ds,fil).forEach(s=>{{
        const st=pd(s.start), et=pd(s.end);
        const sm=st.getHours()*60+st.getMinutes(), em=et.getHours()*60+et.getMinutes();
@@ -373,7 +338,7 @@ function renderWeek(){{
        const b=mk('div','sb');
        b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(colr,.3)}};border-left:3px solid ${{colr}};color:${{colr}};width:95%;left:2.5%;`;
        b.innerHTML=`<div class="sbname">${{s.staff}}</div>`;
-       b.onclick=e=>{{ e.stopPropagation(); if(!clipShift) showDet(s); else pasteToDate(ds); }};
+       b.onclick=e=>{{ e.stopPropagation(); if(clipShift) pasteToDate(ds); else showDet(s); }};
        col.appendChild(b);
     }});
     dc.appendChild(col);
@@ -389,16 +354,13 @@ function renderDay(){{
   const db=mk('div','dbody');
   const sc=mk('div','dscols');
   sc.style.display='flex'; sc.style.flex='1';
-
   const staff=STAFF.length?STAFF:['スタッフ未登録'];
   staff.forEach(s=>{{
     const col=mk('div',`dscol${{clipShift?' paste-col':''}}`);
     col.style.flex='1';
     col.innerHTML=`<div style="text-align:center;padding:5px;border-bottom:1px solid var(--border);font-weight:700;">${{s}}</div>`;
     for(let h=0;h<24;h++) col.appendChild(mk('div','dhs'));
-    
     col.onclick=()=>{{ if(clipShift) pasteToDate(ds); else openReg(ds, '09:00', '18:00', s); }};
-
     fil.filter(x=>x.staff===s && fmt(pd(x.start))===ds).forEach(x=>{{
        const st=pd(x.start), et=pd(x.end);
        const sm=st.getHours()*60+st.getMinutes(), em=et.getHours()*60+et.getMinutes();
@@ -407,7 +369,7 @@ function renderDay(){{
        const b=mk('div','sb');
        b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(colr,.3)}};border-left:3px solid ${{colr}};color:${{colr}};width:95%;left:2.5%;`;
        b.innerHTML=`<div class="sbname">${{x.dept}}</div>`;
-       b.onclick=e=>{{ e.stopPropagation(); if(!clipShift) showDet(x); else pasteToDate(ds); }};
+       b.onclick=e=>{{ e.stopPropagation(); if(clipShift) pasteToDate(ds); else showDet(x); }};
        col.appendChild(b);
     }});
     sc.appendChild(col);
@@ -426,12 +388,9 @@ function closeReg(){{ $$('reg-ov').style.display='none'; }}
 
 async function saveAll(){{
   let items = batchQueue.length > 0 ? [...batchQueue] : [{{
-    staff:$$('m-staff').value, dept:$$('m-dept').value, date:$$('m-date').value, 
-    start:$$('m-start').value, end:$$('m-end').value
+    staff:$$('m-staff').value, dept:$$('m-dept').value, date:$$('m-date').value, start:$$('m-start').value, end:$$('m-end').value
   }}];
-  
-  if(!items[0].staff || items[0].start >= items[0].end) {{ alert('入力内容が正しくありません'); return; }}
-  
+  if(!items[0].staff || items[0].start >= items[0].end) return;
   closeReg(); showLdg(`${{items.length}}件 保存中...`);
   let ok=0;
   for(const item of items){{
@@ -441,20 +400,13 @@ async function saveAll(){{
       ok++;
     }}catch{{}}
   }}
-  clipShift = null; batchQueue = [];
-  hideLdg();
-  showToast(`✅ ${{ok}}件 保存完了`);
-  renderView();
+  clipShift = null; batchQueue = []; hideLdg(); showToast(`✅ ${{ok}}件 保存完了`); renderView();
 }}
 
 let curS=null;
 function showDet(s){{
-  curS=s;
-  const st=pd(s.start),et=pd(s.end),col=deptColor(s.dept);
-  $$('det-body').innerHTML=`
-    <div style="font-weight:700;color:${{col}}">${{s.staff}} (${{s.dept}})</div>
-    <div>📅 ${{fmt(st)}}</div>
-    <div>🕐 ${{p2(st.getHours())}}:${{p2(st.getMinutes())}} - ${{p2(et.getHours())}}:${{p2(et.getMinutes())}}</div>`;
+  curS=s; const st=pd(s.start),et=pd(s.end),col=deptColor(s.dept);
+  $$('det-body').innerHTML=`<div style="font-weight:700;color:${{col}}">${{s.staff}} (${{s.dept}})</div><div>📅 ${{fmt(st)}}</div><div>🕐 ${{p2(st.getHours())}}:${{p2(st.getMinutes())}} - ${{p2(et.getHours())}}:${{p2(et.getMinutes())}}</div>`;
   $$('det-ov').style.display='flex';
 }}
 function closeDet(){{ $$('det-ov').style.display='none'; }}
