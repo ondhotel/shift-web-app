@@ -707,7 +707,7 @@ function renderDay() {{
 }}
 
 // ══════════════════════════════════════
-// シフトブロック生成
+// シフトブロック生成 (修正版)
 // ══════════════════════════════════════
 function mkBlock(s, showStaff, offsetMins, lane, total) {{
   const st=pd_(s.start), et=pd_(s.end);
@@ -719,7 +719,17 @@ function mkBlock(s, showStaff, offsetMins, lane, total) {{
   const b=mk('div','sb'+(isCopied?' copied':''));
   const W=100/total, L=lane*W;
   b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};left:${{L+0.4}}%;width:${{W-0.8}}%;`;
-  b.dataset.idx = SHIFTS.indexOf(s);
+  
+  // ★重要：クリックした時にこのシフトデータ(s)を保持するように修正
+  b.onclick = (e) => {{
+    e.stopPropagation();
+    if (clip) {{
+      togglePasteDate(fmt(pd_(s.start)));
+    }} else {{
+      showDet(s); // 詳細モーダルを開く。ここで curS に s がセットされます
+    }}
+  }};
+
   const nm=mk('div','sbn'); nm.textContent=showStaff?s.staff:s.dept; b.appendChild(nm);
   if(ht>26) {{ const tm=mk('div','sbt'); tm.textContent=`${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`; b.appendChild(tm); }}
   return b;
