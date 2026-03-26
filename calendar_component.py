@@ -463,7 +463,7 @@ function wkStart(d){{const r=new Date(d);r.setDate(r.getDate()-r.getDay());retur
 
 // 週ビュー：重なりシフトを横並びに配置するレイアウト計算
 function calcLanes(shifts){{
-  // shift に {start_m, end_m} が入っている前提
+  // shift に {{start_m, end_m}} が入っている前提
   // 各シフトに lane と totalLanes を付与
   const sorted=[...shifts].sort((a,b)=>a.sm-b.sm);
   const lanes=[]; // lanes[i] = そのレーンの最後のend_m
