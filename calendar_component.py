@@ -764,7 +764,7 @@ function closeDet(){{$$('det-ov').style.display='none';curS=null;}}
 async function delShift(){{
   if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`))return;
   const s=curS;closeDet();showLdg('削除中...');
-  const norm=iso=>iso.replace('T',' ').replace(/(\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}).*$/,'$1');
+  const norm=iso=>iso.replace('T',' ').replace(/(\\d{{4}}-\\d{{2}}-\\d{{2}} \\d{{2}}:\\d{{2}}).*$/,'$1');
   let ok=false;
   try{{
     const r=await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,start:norm(s.start),end:norm(s.end)}}));
