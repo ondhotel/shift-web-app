@@ -259,7 +259,7 @@ const GAS   = "{gas_url}";
 const STAFF = {staff_json};
 const DEPTS = {dept_json};
 let   SHIFTS = {shifts_json_str};
-const CLRS = {json.dumps(color_palette)};
+const CLRS = {color_palette};
 
 function deptColor(d){{
   const i=DEPTS.indexOf(d);
