@@ -31,7 +31,6 @@ def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: lis
         "#c4b05a","#5ac4a2","#c45a7e","#8fc45a","#c45ab0","#5a8fc4"
     ]
 
-    # ★ 修正: heightを固定px値で渡し、内部はそのpx-topbarで flex表示
     COMPONENT_HEIGHT = 780
 
     html_code = f"""<!DOCTYPE html>
@@ -43,20 +42,19 @@ def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: lis
 :root{{
   --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2d3148;
   --text:#e8eaf2;--text-muted:#6b7094;--accent:#5b8af0;--accent2:#8b5cf6;
-  --success:#34d399;--danger:#f87171;--warn:#f59e0b;
+  --success:#34d399;--danger:#f87171;--warn:#f59e0b;--copy:#f0a05b;
   --today:rgba(91,138,240,.12);--hover:rgba(91,138,240,.08);
   --drag:rgba(91,138,240,.25);--nextday:rgba(139,92,246,.06);
+  --paste-hover:rgba(240,160,91,.18);
   --font:'Noto Sans JP',sans-serif;--mono:'JetBrains Mono',monospace;
 }}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;user-select:none;}}
-
-/* ── layout ── */
 #app{{display:flex;flex-direction:column;height:{COMPONENT_HEIGHT}px;}}
 #topbar{{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;height:52px;}}
 #cal{{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}}
 
-/* ── topbar widgets ── */
+/* topbar */
 .view-tabs{{display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:2px;}}
 .vt{{padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);border:none;background:transparent;transition:all .15s;font-family:var(--font);}}
 .vt.on{{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(91,138,240,.4);}}
@@ -70,29 +68,41 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .fgrp{{display:flex;gap:8px;margin-left:auto;align-items:center;}}
 .fsel{{padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;}}
 
-/* ── month ── */
+/* ペーストモードバナー */
+#paste-banner{{display:none;background:rgba(240,160,91,.18);border:1px solid var(--copy);border-radius:6px;padding:4px 12px;font-size:11px;color:var(--copy);font-weight:600;align-items:center;gap:8px;}}
+#paste-banner button{{background:transparent;border:1px solid var(--copy);color:var(--copy);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:var(--font);}}
+#paste-banner button:hover{{background:var(--copy);color:#000;}}
+
+/* month */
 .month-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
 .mhdr{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);flex-shrink:0;}}
 .mhc{{padding:7px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;}}
 .mhc:first-child{{color:#f87171;}}.mhc:last-child{{color:#60a5fa;}}
 .mgrid{{flex:1;display:grid;grid-template-rows:repeat(6,1fr);overflow-y:auto;}}
 .mrow{{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}}
-.mcell{{border-right:1px solid var(--border);padding:5px;cursor:pointer;transition:background .12s;overflow:hidden;min-height:80px;}}
+.mcell{{border-right:1px solid var(--border);padding:5px;cursor:pointer;transition:background .12s;overflow:hidden;min-height:80px;position:relative;}}
 .mcell:hover{{background:var(--hover);}}
+.mcell.paste-target:hover{{background:var(--paste-hover)!important;outline:2px dashed var(--copy);outline-offset:-2px;}}
 .mcell.other{{opacity:.35;}}.mcell.tod{{background:var(--today);}}
 .mcell.sun .dnum{{color:#f87171;}}.mcell.sat .dnum{{color:#60a5fa;}}
 .dnum{{font-size:12px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--mono);margin-bottom:3px;}}
 .tod .dnum{{background:var(--accent);color:#fff;}}
-.mchip{{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;}}
+/* 月ビュー: 通常チップ */
+.mchip{{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;position:relative;}}
+.mchip.copied{{outline:2px solid var(--copy);}}
+/* 月ビュー: マージされたチップ（連続シフト） */
+.mchip-merged{{border-radius:3px;margin-bottom:2px;overflow:hidden;cursor:pointer;font-size:10px;font-weight:500;}}
+.mchip-seg{{padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
 .mmore{{font-size:10px;color:var(--text-muted);cursor:pointer;padding:1px 4px;}}
 .mmore:hover{{color:var(--accent);}}
 
-/* ── week ── */
+/* week */
 .week-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
 .whdr{{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
 .whcorner{{padding:8px 0;}}
 .whday{{padding:7px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;}}
 .whday:hover{{background:var(--hover);}}
+.whday.paste-col:hover{{background:var(--paste-hover)!important;}}
 .wdow{{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}}
 .wdnum{{font-size:18px;font-weight:700;font-family:var(--mono);line-height:1.2;}}
 .whday.tod .wdnum{{color:var(--accent);}}
@@ -104,9 +114,11 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .wdaycols{{flex:1;display:grid;grid-template-columns:repeat(7,1fr);}}
 .wdcol{{border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
 .wdcol.tod{{background:var(--today);}}
+.wdcol.paste-col{{cursor:copy;}}
+.wdcol.paste-col:hover{{background:var(--paste-hover)!important;}}
 .whs{{height:48px;border-bottom:1px solid var(--border);}}
 
-/* ── day ── */
+/* day */
 .day-view{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
 .dshdr{{display:flex;border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
 .dtcorner{{width:60px;min-width:60px;flex-shrink:0;padding:8px 4px;font-size:10px;color:var(--text-muted);text-align:center;border-right:1px solid var(--border);}}
@@ -117,19 +129,22 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .dts.midnight{{border-top:2px solid var(--accent2);color:var(--accent2);font-weight:700;}}
 .dscols{{flex:1;display:flex;overflow-x:auto;}}
 .dscol{{flex:1;min-width:90px;border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
+.dscol.paste-col{{cursor:copy;}}
+.dscol.paste-col:hover{{background:var(--paste-hover)!important;}}
 .dhs{{height:48px;border-bottom:1px solid var(--border);}}
 .nextzone{{position:absolute;left:0;right:0;background:var(--nextday);border-top:1px dashed var(--accent2);pointer-events:none;z-index:0;}}
 .nowline{{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
 .nowline::before{{content:'';position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#f87171;}}
 
-/* ── shift block ── */
-.sb{{position:absolute;left:2px;right:2px;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;transition:filter .12s;border:1px solid rgba(255,255,255,.1);}}
+/* shift block */
+.sb{{position:absolute;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;transition:filter .12s;border:1px solid rgba(255,255,255,.1);}}
 .sb:hover{{filter:brightness(1.25);z-index:4;}}
+.sb.copied{{outline:2px solid var(--copy);box-shadow:0 0 0 3px rgba(240,160,91,.3);z-index:2;}}
 .sbname{{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
 .sbtime{{font-size:9px;opacity:.8;font-family:var(--mono);}}
 .drag-sel{{position:absolute;left:2px;right:2px;background:var(--drag);border:2px dashed var(--accent);border-radius:4px;z-index:10;pointer-events:none;}}
 
-/* ── modal ── */
+/* modal */
 .ov{{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}}
 .modal{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:400px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.6);animation:mIn .18s ease;}}
 @keyframes mIn{{from{{transform:scale(.93);opacity:0;}}to{{transform:scale(1);opacity:1;}}}}
@@ -145,22 +160,17 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
 .btn-p{{background:var(--accent);color:#fff;}}.btn-p:hover{{background:#4272d8;}}
 .btn-s{{background:var(--surface2);color:var(--text);border:1px solid var(--border);}}.btn-s:hover{{border-color:var(--accent);color:var(--accent);}}
 .btn-d{{background:var(--danger);color:#fff;flex:0;padding:9px 14px;}}.btn-d:hover{{background:#ef4444;}}
+.btn-c{{background:rgba(240,160,91,.2);color:var(--copy);border:1px solid var(--copy);flex:0;padding:9px 14px;}}.btn-c:hover{{background:var(--copy);color:#000;}}
 .btn-add{{background:var(--success);color:#fff;flex:0;padding:9px 14px;white-space:nowrap;}}.btn-add:hover{{background:#22c37e;}}
-
-/* batch list */
-.batch-list{{max-height:180px;overflow-y:auto;margin-bottom:10px;}}
+.batch-list{{max-height:160px;overflow-y:auto;margin-bottom:8px;}}
 .batch-item{{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:12px;border:1px solid var(--border);}}
 .batch-item .bi-label{{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
 .batch-item .bi-del{{color:var(--danger);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11px;border:none;background:transparent;}}
 .batch-item .bi-del:hover{{background:rgba(248,113,113,.15);}}
 .batch-count{{font-size:11px;color:var(--text-muted);margin-bottom:8px;}}
-
-/* detail */
 .dchip{{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;}}
 .drow{{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}}
 .drow:last-child{{border-bottom:none;}}.dicon{{font-size:15px;width:22px;text-align:center;}}
-
-/* toast / loading */
 .toast{{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;animation:tIn .25s ease;max-width:300px;color:#fff;}}
 .toast.ok{{background:var(--success);box-shadow:0 6px 20px rgba(52,211,153,.4);}}
 .toast.err{{background:var(--danger);box-shadow:0 6px 20px rgba(248,113,113,.4);}}
@@ -185,6 +195,11 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
       <button class="nb" onclick="nav(1)">&#8250;</button>
     </div>
     <button class="today-btn" onclick="goToday()">今日</button>
+    <!-- ペーストモードバナー -->
+    <div id="paste-banner">
+      <span id="paste-label">📋 ペーストモード</span>
+      <button onclick="cancelCopy()">キャンセル (Esc)</button>
+    </div>
     <div class="fgrp">
       <select class="fsel" id="fstaff" onchange="renderView()"><option value="">全スタッフ</option></select>
       <select class="fsel" id="fdept"  onchange="renderView()"><option value="">全部門</option></select>
@@ -193,14 +208,12 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
   <div id="cal"></div>
 </div>
 
-<!-- 登録モーダル（複数シフト対応） -->
+<!-- 登録モーダル -->
 <div class="ov" id="reg-ov" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
     <div class="mtitle">📋 シフト登録
       <span id="reg-mode-label" style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:4px;"></span>
     </div>
-
-    <!-- 入力フォーム -->
     <div class="fg"><label class="fl">従業員</label><select class="fsel2" id="m-staff"></select></div>
     <div class="fg"><label class="fl">部門</label><select class="fsel2" id="m-dept"></select></div>
     <div class="fg"><label class="fl">日付</label><input type="date" class="fi" id="m-date"></div>
@@ -212,20 +225,17 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
         <input type="time" class="fi" id="m-end" value="18:00">
       </div>
     </div>
-
-    <!-- キューリスト -->
     <div id="batch-section" style="display:none">
       <div class="batch-count" id="batch-count"></div>
       <div class="batch-list" id="batch-list"></div>
     </div>
-
     <div class="mact">
       <button class="btn btn-s" onclick="closeReg()">閉じる</button>
-      <button class="btn btn-add" onclick="addToBatch()" title="フォームの内容をリストに追加">＋ リストに追加</button>
+      <button class="btn btn-add" onclick="addToBatch()">＋ リストに追加</button>
       <button class="btn btn-p"  onclick="saveAll()">保存</button>
     </div>
     <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
-      💡「リストに追加」で複数件まとめて登録できます。「保存」でリスト全件を一括保存します。
+      💡「リストに追加」で複数件まとめて登録できます。
     </div>
   </div>
 </div>
@@ -237,6 +247,7 @@ html,body{{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:va
     <div id="det-body"></div>
     <div class="mact" style="margin-top:14px">
       <button class="btn btn-s" onclick="closeDet()">閉じる</button>
+      <button class="btn btn-c" onclick="copyShift()">📋 コピー</button>
       <button class="btn btn-d" onclick="delShift()">削除</button>
     </div>
   </div>
@@ -260,17 +271,19 @@ function rgba(hex,a){{
   return `rgba(${{parseInt(hex.slice(1,3),16)}},${{parseInt(hex.slice(3,5),16)}},${{parseInt(hex.slice(5,7),16)}},${{a}})`;
 }}
 
-// ═══ CONSTANTS ═══════════════════════════
+// ═══ CONSTANTS ═══════════════════════
 const DAYS=['日','月','火','水','木','金','土'];
 const MONS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-const HPX=48, DAY_H=30, MID_H=24; // 日ビュー: 30h, 深夜境界=24
+const HPX=48, DAY_H=30, MID_H=24;
+const MERGE_GAP_MINS = 5; // 月ビューでこの分以内なら連続とみなしてマージ
 
-// ═══ STATE ════════════════════════════════
+// ═══ STATE ════════════════════════════
 let view='day';
 let cur=new Date(); cur.setHours(0,0,0,0);
-let batchQueue=[]; // 複数シフト登録キュー
+let batchQueue=[];
+let clipShift=null; // コピーされたシフト
 
-// ═══ INIT ════════════════════════════════
+// ═══ INIT ════════════════════════════
 window.onload=()=>{{
   ['fstaff','m-staff'].forEach(id=>STAFF.forEach(s=>$$(id).appendChild(new Option(s,s))));
   ['fdept', 'm-dept' ].forEach(id=>DEPTS.forEach(d=>$$(id).appendChild(new Option(d,d))));
@@ -289,8 +302,10 @@ function filtered(){{
   const fs=$$('fstaff')?.value||'',fd=$$('fdept')?.value||'';
   return SHIFTS.filter(s=>(!fs||s.staff===fs)&&(!fd||s.dept===fd));
 }}
+function sMins(s){{const d=pd(s.start);return d.getHours()*60+d.getMinutes();}}
+function eMins(s){{const d=pd(s.end);return d.getHours()*60+d.getMinutes();}}
 
-// ═══ VIEW ════════════════════════════════
+// ═══ VIEW ════════════════════════════
 function setView(v){{
   view=v;
   document.querySelectorAll('.vt').forEach((e,i)=>e.classList.toggle('on',['day','week','month'][i]===v));
@@ -307,9 +322,40 @@ function renderView(){{
   if(view==='day') renderDay();
   else if(view==='week') renderWeek();
   else renderMonth();
+  updatePasteBanner();
 }}
 
-// ═══ MONTH ═══════════════════════════════
+// ═══ COPY / PASTE ════════════════════
+function copyShift(){{
+  closeDet();
+  clipShift={{...curS}};
+  updatePasteBanner();
+  showToast('📋 コピーしました。貼り付け先の日付をクリックしてください','ok',4000);
+  renderView();
+}}
+function cancelCopy(){{
+  clipShift=null;
+  updatePasteBanner();
+  renderView();
+}}
+function updatePasteBanner(){{
+  const b=$$('paste-banner');
+  if(clipShift){{
+    b.style.display='flex';
+    const st=pd(clipShift.start),et=pd(clipShift.end);
+    $$('paste-label').textContent=`📋 ペーストモード: ${{clipShift.staff}} ${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
+  }} else {{
+    b.style.display='none';
+  }}
+}}
+function pasteToDate(dateStr){{
+  if(!clipShift) return;
+  const st=pd(clipShift.start),et=pd(clipShift.end);
+  openReg(dateStr, `${{p2(st.getHours())}}:${{p2(st.getMinutes())}}`, `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`, clipShift.staff, clipShift.dept);
+  cancelCopy();
+}}
+
+// ═══ MONTH ═══════════════════════════
 function renderMonth(){{
   const y=cur.getFullYear(),mo=cur.getMonth();
   $$('plabel').textContent=`${{y}}年 ${{MONS[mo]}}`;
@@ -330,19 +376,81 @@ function renderMonth(){{
     const row=mk('div','mrow');
     cells.slice(r*7,r*7+7).forEach(cell=>{{
       const cd=new Date(cell.y,cell.m,cell.d),ds=fmt(cd),dow=cd.getDay();
-      const mc=mk('div',`mcell${{cell.o?' other':''}}${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}`);
+      const mc=mk('div',`mcell${{cell.o?' other':''}}${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{clipShift?' paste-target':''}}`);
       const dn=mk('div','dnum'); dn.textContent=cell.d; mc.appendChild(dn);
-      const ss=shOn(ds,fil);
-      ss.slice(0,3).forEach(s=>{{
-        const col=deptColor(s.dept),ch=mk('div','mchip');
-        ch.style.cssText=`background:${{rgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
-        const st=pd(s.start),et=pd(s.end);
-        ch.textContent=`${{s.staff}} ${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
-        ch.onclick=e=>{{e.stopPropagation();showDet(s);}};
-        mc.appendChild(ch);
+
+      // クリック：ペーストモードならペースト、そうでなければ登録
+      mc.onclick=(e)=>{{
+        if(e.target.classList.contains('mchip')||e.target.classList.contains('mchip-seg')) return;
+        if(clipShift) pasteToDate(ds);
+        else openReg(ds);
+      }};
+
+      // ── 月ビュー：同一スタッフの連続シフトをマージして表示 ──
+      const dayShifts=shOn(ds,fil);
+      // スタッフ別にグループ化してマージ
+      const staffGroups={{}};
+      dayShifts.forEach(s=>{{
+        if(!staffGroups[s.staff]) staffGroups[s.staff]=[];
+        staffGroups[s.staff].push(s);
       }});
-      if(ss.length>3){{const mm=mk('div','mmore');mm.textContent=`+${{ss.length-3}}件`;mc.appendChild(mm);}}
-      mc.onclick=()=>openReg(ds);
+      // 表示用アイテムリスト（マージ済み or 単体）
+      const displayItems=[];
+      Object.values(staffGroups).forEach(shifts=>{{
+        shifts.sort((a,b)=>sMins(a)-sMins(b));
+        let i=0;
+        while(i<shifts.length){{
+          // 連続するシフトをまとめる
+          let group=[shifts[i]];
+          while(i+1<shifts.length && eMins(shifts[i])+MERGE_GAP_MINS >= sMins(shifts[i+1])){{
+            i++;
+            group.push(shifts[i]);
+          }}
+          displayItems.push(group);
+          i++;
+        }}
+      }});
+
+      const maxShow=3;
+      displayItems.slice(0,maxShow).forEach(group=>{{
+        const first=group[0], last=group[group.length-1];
+        const col=deptColor(first.dept);
+        const isCopied=clipShift&&first.staff===clipShift.staff&&first.start===clipShift.start;
+        if(group.length===1){{
+          // 単体チップ
+          const ch=mk('div','mchip'+(isCopied?' copied':''));
+          ch.style.cssText=`background:${{rgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
+          const st=pd(first.start),et=pd(first.end);
+          ch.textContent=`${{first.staff}} ${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
+          ch.onclick=e=>{{e.stopPropagation();showDet(first);}};
+          mc.appendChild(ch);
+        }} else {{
+          // マージチップ：セグメントを縦に並べる
+          const merged=mk('div','mchip-merged'+(isCopied?' copied':''));
+          merged.style.borderLeft=`3px solid ${{col}}`;
+          merged.style.background=rgba(col,.12);
+          merged.style.color=col;
+          // ヘッダー（スタッフ名 + 全体時間）
+          const st0=pd(first.start),etN=pd(last.end);
+          const hdr=mk('div','mchip-seg');
+          hdr.style.cssText=`background:${{rgba(col,.3)}};font-weight:700;`;
+          hdr.textContent=`${{first.staff}} ${{p2(st0.getHours())}}:${{p2(st0.getMinutes())}}-${{p2(etN.getHours())}}:${{p2(etN.getMinutes())}}`;
+          merged.appendChild(hdr);
+          // 各セグメント
+          group.forEach(s=>{{
+            const seg=mk('div','mchip-seg');
+            const sst=pd(s.start),set=pd(s.end);
+            seg.style.cssText=`background:${{rgba(col,.15)}};font-size:9px;border-top:1px solid ${{rgba(col,.2)}};`;
+            seg.textContent=`${{s.dept}} ${{p2(sst.getHours())}}:${{p2(sst.getMinutes())}}-${{p2(set.getHours())}}:${{p2(set.getMinutes())}}`;
+            seg.onclick=e=>{{e.stopPropagation();showDet(s);}};
+            merged.appendChild(seg);
+          }});
+          mc.appendChild(merged);
+        }}
+      }});
+      if(displayItems.length>maxShow){{
+        const mm=mk('div','mmore');mm.textContent=`+${{displayItems.length-maxShow}}件`;mc.appendChild(mm);
+      }}
       row.appendChild(mc);
     }});
     mg.appendChild(row);
@@ -350,8 +458,28 @@ function renderMonth(){{
   mv.appendChild(mg); root.appendChild(mv);
 }}
 
-// ═══ WEEK ════════════════════════════════
+// ═══ WEEK ═══════════════════════════
 function wkStart(d){{const r=new Date(d);r.setDate(r.getDate()-r.getDay());return r;}}
+
+// 週ビュー：重なりシフトを横並びに配置するレイアウト計算
+function calcLanes(shifts){{
+  // shift に {start_m, end_m} が入っている前提
+  // 各シフトに lane と totalLanes を付与
+  const sorted=[...shifts].sort((a,b)=>a.sm-b.sm);
+  const lanes=[]; // lanes[i] = そのレーンの最後のend_m
+  sorted.forEach(s=>{{
+    let lane=-1;
+    for(let i=0;i<lanes.length;i++){{
+      if(lanes[i]<=s.sm){{lane=i;lanes[i]=s.em;break;}}
+    }}
+    if(lane===-1){{lane=lanes.length;lanes.push(s.em);}}
+    s.lane=lane;
+  }});
+  const total=lanes.length;
+  sorted.forEach(s=>s.totalLanes=total);
+  return sorted;
+}}
+
 function renderWeek(){{
   const ws=wkStart(cur),we=new Date(ws);we.setDate(we.getDate()+6);
   const [y1,m1,d1]=[ws.getFullYear(),ws.getMonth()+1,ws.getDate()];
@@ -364,9 +492,13 @@ function renderWeek(){{
   for(let i=0;i<7;i++){{
     const d=new Date(ws);d.setDate(d.getDate()+i);
     const ds=fmt(d),dow=d.getDay();
-    const hd=mk('div',`whday${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}`);
+    const isPaste=!!clipShift;
+    const hd=mk('div',`whday${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{isPaste?' paste-col':''}}`);
     hd.innerHTML=`<div class="wdow">${{DAYS[dow]}}</div><div class="wdnum">${{d.getDate()}}</div>`;
-    hd.onclick=()=>{{cur=new Date(d);setView('day');}};
+    hd.onclick=()=>{{
+      if(clipShift)pasteToDate(ds);
+      else{{cur=new Date(d);setView('day');}}
+    }};
     wh.appendChild(hd);
   }}
   wv.appendChild(wh);
@@ -378,16 +510,32 @@ function renderWeek(){{
   for(let i=0;i<7;i++){{
     const d=new Date(ws);d.setDate(d.getDate()+i);
     const ds=fmt(d),dow=d.getDay();
-    const col=mk('div',`wdcol${{ds===td?' tod':''}}`);
+    const isPaste=!!clipShift;
+    const col=mk('div',`wdcol${{ds===td?' tod':''}}${{isPaste?' paste-col':''}}`);
     for(let h=0;h<24;h++) col.appendChild(mk('div','whs'));
-    dragWeek(col,ds);
-    shOn(ds,fil).forEach(s=>col.appendChild(block(s,true,0)));
+
+    // ドラッグ（ペーストモード中はスキップ）
+    if(!isPaste) dragWeek(col,ds);
+
+    // シフトブロック（横並びレイアウト付き）
+    const dayShifts=shOn(ds,fil).map(s=>{{
+      return {{...s, sm:sMins(s), em:eMins(s)||1440}};
+    }});
+    const laid=calcLanes(dayShifts);
+    laid.forEach(s=>{{
+      const b=blockW(s,true,0,s.lane,s.totalLanes);
+      col.appendChild(b);
+    }});
+
+    // ペーストモード中のクリック
+    if(isPaste) col.addEventListener('click',()=>pasteToDate(ds));
+
     dc.appendChild(col);
   }}
   wb.appendChild(dc);wv.appendChild(wb);root.appendChild(wv);
 }}
 
-// ═══ DAY ═════════════════════════════════
+// ═══ DAY ══════════════════════════════
 function renderDay(){{
   const y=cur.getFullYear(),mo=cur.getMonth()+1,d=cur.getDate(),dow=cur.getDay();
   $$('plabel').textContent=`${{y}}年${{mo}}月${{d}}日（${{DAYS[dow]}}）`;
@@ -396,23 +544,18 @@ function renderDay(){{
   const fsv=$$('fstaff')?.value||'';
   const staff=fsv?[fsv]:STAFF;
   const root=$$('cal'); root.innerHTML='';
-
-  // スタッフ未登録でも「クリックで登録」できるメッセージ表示
   if(!staff.length){{
     root.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:12px;"><div style="font-size:32px">👥</div><div>スタッフを登録してください</div></div>';
     return;
   }}
-
+  const isPaste=!!clipShift;
   const dv=mk('div','day-view');
-  // ヘッダー
   const sh=mk('div','dshdr');
   const corn=mk('div','dtcorner');
   corn.innerHTML=ds===td?'<span style="color:var(--accent);font-weight:700;font-size:11px">今日</span>':'';
   sh.appendChild(corn);
   staff.forEach(s=>{{const h=mk('div','dsch');h.textContent=s;sh.appendChild(h);}});
   dv.appendChild(sh);
-
-  // ボディ
   const db=mk('div','dbody');
   const tc=mk('div','dtcol');
   for(let h=0;h<DAY_H;h++){{
@@ -424,30 +567,31 @@ function renderDay(){{
     tc.appendChild(ts);
   }}
   db.appendChild(tc);
-
   const sc=mk('div','dscols');
   staff.forEach(s=>{{
-    const col=mk('div','dscol');
+    const col=mk('div','dscol'+(isPaste?' paste-col':''));
     for(let h=0;h<DAY_H;h++) col.appendChild(mk('div','dhs'));
-    // 翌日ゾーン背景
     const nz=mk('div','nextzone');
     nz.style.top=MID_H*HPX+'px';nz.style.bottom='0';
     col.appendChild(nz);
-    dragDay(col,ds,dsN,s);
-    // 当日シフト
+    if(isPaste){{
+      col.addEventListener('click',e=>{{
+        if(e.target.classList.contains('sb'))return;
+        pasteToDate(ds);
+      }});
+    }} else {{
+      dragDay(col,ds,dsN,s);
+    }}
     fil.filter(x=>x.staff===s&&x.start&&fmt(pd(x.start))===ds)
-       .forEach(x=>col.appendChild(block(x,false,0)));
-    // 翌日0-6時シフト
+       .forEach(x=>col.appendChild(blockW(x,false,0,0,1)));
     fil.filter(x=>x.staff===s&&x.start&&fmt(pd(x.start))===dsN)
        .forEach(x=>{{
          const h=pd(x.start).getHours();
-         if(h<(DAY_H-MID_H)) col.appendChild(block(x,false,1440));
+         if(h<(DAY_H-MID_H)) col.appendChild(blockW(x,false,1440,0,1));
        }});
     sc.appendChild(col);
   }});
   db.appendChild(sc);dv.appendChild(db);root.appendChild(dv);
-
-  // 現在時刻ライン
   const now=new Date(),diff=(now-cur)/60000;
   if(diff>=0&&diff<DAY_H*60){{
     const nl=mk('div','nowline');
@@ -456,22 +600,27 @@ function renderDay(){{
   }}
 }}
 
-// ═══ SHIFT BLOCK ═════════════════════════
-function block(s,showStaff,offsetMins){{
+// ═══ SHIFT BLOCK（レーン対応）════════════
+// lane=0始まり、totalLanes=その日の最大レーン数
+function blockW(s,showStaff,offsetMins,lane,totalLanes){{
   const st=pd(s.start),et=pd(s.end);
   const sm=st.getHours()*60+st.getMinutes()+offsetMins;
   const em=et.getHours()*60+et.getMinutes()+offsetMins;
   const top=sm/60*HPX, ht=Math.max((em-sm)/60*HPX,16);
   const col=deptColor(s.dept);
-  const b=mk('div','sb');
-  b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};`;
+  const isCopied=clipShift&&s.staff===clipShift.staff&&s.start===clipShift.start;
+  const b=mk('div','sb'+(isCopied?' copied':''));
+  // 横幅をレーン数で分割
+  const W=100/totalLanes;
+  const L=lane*W;
+  b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};left:${{L+0.5}}%;width:${{W-1}}%;right:auto;`;
   const nm=mk('div','sbname');nm.textContent=showStaff?s.staff:s.dept;b.appendChild(nm);
   if(ht>28){{const tm=mk('div','sbtime');tm.textContent=`${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;b.appendChild(tm);}}
   b.onclick=e=>{{e.stopPropagation();showDet(s);}};
   return b;
 }}
 
-// ═══ DRAG ════════════════════════════════
+// ═══ DRAG ════════════════════════════
 let ds=null;
 function y2m(y){{return y/HPX*60;}}
 function snap(m){{return Math.round(m/15)*15;}}
@@ -524,14 +673,18 @@ function dragDay(col,dateStr,dateStrN,staffName){{
 }}
 document.addEventListener('mouseup',()=>{{if(ds?.el)ds.el.remove();ds=null;}});
 
-// ═══ REGISTER MODAL（複数シフト対応）═════
-function openReg(dateStr,startT,endT,staffName){{
+// ═══ MODAL ═════════════════════════
+function openReg(dateStr,startT,endT,staffName,deptName){{
   $$('m-date').value=dateStr||fmt(cur);
   $$('m-start').value=startT||'09:00';
   $$('m-end').value=endT||'18:00';
   if(staffName){{
     const sel=$$('m-staff');
     for(const o of sel.options) if(o.value===staffName){{sel.value=staffName;break;}}
+  }}
+  if(deptName){{
+    const sel=$$('m-dept');
+    for(const o of sel.options) if(o.value===deptName){{sel.value=deptName;break;}}
   }}
   renderBatchUI();
   $$('reg-ov').style.display='flex';
@@ -541,8 +694,6 @@ function closeReg(){{
   batchQueue=[];
   renderBatchUI();
 }}
-
-// バッチキューにフォームの内容を追加
 function addToBatch(){{
   const staff=$$('m-staff').value,dept=$$('m-dept').value;
   const date=$$('m-date').value,s=$$('m-start').value,e=$$('m-end').value;
@@ -550,35 +701,22 @@ function addToBatch(){{
   if(s>=e){{alert('終了は開始より後にしてください');return;}}
   batchQueue.push({{staff,dept,date,start:s,end:e}});
   renderBatchUI();
-  // フォームのスタッフ・時間はそのまま（次の人を連続入力しやすくする）
-  // 日付だけ維持、スタッフ選択を次の人に進める
-  showToast(`➕ リストに追加: ${{staff}} ${{s}}-${{e}}`,'ok',2000);
+  showToast(`➕ ${{staff}} ${{s}}-${{e}}`,'ok',2000);
 }}
-
 function renderBatchUI(){{
-  const sec=$$('batch-section'),list=$$('batch-list'),cnt=$$('batch-count');
-  const lbl=$$('reg-mode-label');
-  if(batchQueue.length===0){{
-    sec.style.display='none';
-    lbl.textContent='';
-    return;
-  }}
+  const sec=$$('batch-section'),list=$$('batch-list'),cnt=$$('batch-count'),lbl=$$('reg-mode-label');
+  if(batchQueue.length===0){{sec.style.display='none';lbl.textContent='';return;}}
   sec.style.display='block';
   lbl.textContent=`（キュー: ${{batchQueue.length}}件）`;
   cnt.textContent=`登録予定: ${{batchQueue.length}} 件`;
   list.innerHTML='';
   batchQueue.forEach((item,i)=>{{
     const row=mk('div','batch-item');
-    const lbl2=mk('div','bi-label');
-    lbl2.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.date}} ${{item.start}}-${{item.end}}`;
-    const del=mk('button','bi-del');
-    del.textContent='✕';del.onclick=()=>{{batchQueue.splice(i,1);renderBatchUI();}};
-    row.appendChild(lbl2);row.appendChild(del);
-    list.appendChild(row);
+    const lbl2=mk('div','bi-label');lbl2.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.date}} ${{item.start}}-${{item.end}}`;
+    const del=mk('button','bi-del');del.textContent='✕';del.onclick=()=>{{batchQueue.splice(i,1);renderBatchUI();}};
+    row.appendChild(lbl2);row.appendChild(del);list.appendChild(row);
   }});
 }}
-
-// 保存: キューがあればキュー全件、なければフォーム単体
 async function saveAll(){{
   let items=[];
   if(batchQueue.length>0){{
@@ -590,10 +728,7 @@ async function saveAll(){{
     if(s>=e){{alert('終了は開始より後にしてください');return;}}
     items=[{{staff,dept,date,start:s,end:e}}];
   }}
-
-  closeReg();
-  showLdg(`${{items.length}}件 保存中...`);
-
+  closeReg();showLdg(`${{items.length}}件 保存中...`);
   let ok=0,fail=0;
   for(const item of items){{
     try{{
@@ -602,14 +737,13 @@ async function saveAll(){{
       ok++;
     }}catch{{fail++;}}
   }}
-
   hideLdg();
   if(fail===0) showToast(`✅ ${{ok}}件 保存しました`,'ok');
   else showToast(`⚠️ ${{ok}}件成功 / ${{fail}}件失敗`,'warn');
   renderView();
 }}
 
-// ═══ DETAIL + DELETE ════════════════════
+// ═══ DETAIL / DELETE ════════════════
 let curS=null,curI=-1;
 function showDet(s){{
   curS=s;curI=SHIFTS.indexOf(s);
@@ -636,11 +770,11 @@ async function delShift(){{
   const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
   if(i>=0)SHIFTS.splice(i,1);
   hideLdg();
-  ok?showToast('🗑️ 削除しました','ok'):showToast('🗑️ 画面から削除（シートはGAS del_shift設定後に連携）','warn');
+  ok?showToast('🗑️ 削除しました','ok'):showToast('🗑️ 画面から削除（GAS側も要確認）','warn');
   renderView();
 }}
 
-// ═══ HELPERS ═════════════════════════════
+// ═══ HELPERS ════════════════════════
 function showToast(msg,type='ok',dur=3500){{
   const t=mk('div',`toast ${{type}}`);t.textContent=msg;
   document.body.appendChild(t);setTimeout(()=>t.remove(),dur);
@@ -652,7 +786,10 @@ function showLdg(msg='処理中...'){{
 }}
 function hideLdg(){{$$('ldg')?.remove();}}
 document.addEventListener('keydown',e=>{{
-  if(e.key==='Escape'){{closeReg();closeDet();}}
+  if(e.key==='Escape'){{
+    if(clipShift)cancelCopy();
+    closeReg();closeDet();
+  }}
   if(!e.target.matches('input,select,textarea')){{
     if(e.key==='ArrowLeft') nav(-1);
     if(e.key==='ArrowRight') nav(1);
