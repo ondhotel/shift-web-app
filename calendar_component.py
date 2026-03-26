@@ -354,18 +354,16 @@ function pasteToDate(dateStr){
 
   const st=pd(clipShift.start),et=pd(clipShift.end);
 
-  // ★ モーダル開かずバッチに直接追加
-  batchQueue.push({
+  batchQueue.push({{
     staff: clipShift.staff,
     dept: clipShift.dept,
     date: dateStr,
-    start: `${p2(st.getHours())}:${p2(st.getMinutes())}`,
-    end: `${p2(et.getHours())}:${p2(et.getMinutes())}`
-  });
+    start: `${{p2(st.getHours())}}:${{p2(st.getMinutes())}}`,
+    end: `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`
+  }});
 
-  showToast(`📋 追加: ${clipShift.staff} ${dateStr}`, 'ok', 1500);
+  showToast(`📋 追加: ${{clipShift.staff}} ${{dateStr}}`, 'ok', 1500);
 
-  // ★ コピーは維持（←ここが重要）
   updatePasteBanner();
 }
 
