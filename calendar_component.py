@@ -33,7 +33,7 @@ def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: lis
 
     COMPONENT_HEIGHT = 780
 
-    # Pythonのf-string内でJavaScriptの{}を使うため、全ての{}を{{}}にエスケープしています
+    # f-string内のJavaScriptの波括弧を{{}}に二重化して修正しました
     html_code = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -55,6 +55,7 @@ html,body {{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:v
 #topbar {{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;height:52px;}}
 #cal {{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}}
 
+/* topbar */
 .view-tabs {{display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:2px;}}
 .vt {{padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);border:none;background:transparent;transition:all .15s;font-family:var(--font);}}
 .vt.on {{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(91,138,240,.4);}}
@@ -64,47 +65,119 @@ html,body {{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:v
 .nb:hover {{border-color:var(--accent);background:var(--hover);}}
 #plabel {{font-size:14px;font-weight:700;min-width:170px;text-align:center;}}
 .today-btn {{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;font-family:var(--font);font-weight:500;}}
+.today-btn:hover {{border-color:var(--accent);color:var(--accent);}}
+.fgrp {{display:flex;gap:8px;margin-left:auto;align-items:center;}}
+.fsel {{padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;}}
 
-#paste-banner {{display:none;background:rgba(240,160,91,.25);border:1px solid var(--copy);border-radius:8px;padding:6px 16px;font-size:12px;color:var(--copy);font-weight:600;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}}
-#paste-banner button {{background:var(--surface2);border:1px solid var(--copy);color:var(--copy);border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:var(--font);font-weight:700;}}
+/* ペーストモードバナー */
+#paste-banner {{display:none;background:rgba(240,160,91,.18);border:1px solid var(--copy);border-radius:6px;padding:4px 12px;font-size:11px;color:var(--copy);font-weight:600;align-items:center;gap:8px;}}
+#paste-banner button {{background:transparent;border:1px solid var(--copy);color:var(--copy);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:var(--font);}}
+#paste-banner button:hover {{background:var(--copy);color:#000;}}
 
+/* month */
 .month-view {{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
 .mhdr {{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);flex-shrink:0;}}
 .mhc {{padding:7px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;}}
+.mhc:first-child {{color:#f87171;}}.mhc:last-child {{color:#60a5fa;}}
 .mgrid {{flex:1;display:grid;grid-template-rows:repeat(6,1fr);overflow-y:auto;}}
 .mrow {{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}}
 .mcell {{border-right:1px solid var(--border);padding:5px;cursor:pointer;transition:background .12s;overflow:hidden;min-height:80px;position:relative;}}
 .mcell:hover {{background:var(--hover);}}
 .mcell.paste-target:hover {{background:var(--paste-hover)!important;outline:2px dashed var(--copy);outline-offset:-2px;}}
+.mcell.other {{opacity:.35;}}.mcell.tod {{background:var(--today);}}
+.mcell.sun .dnum {{color:#f87171;}}.mcell.sat .dnum {{color:#60a5fa;}}
 .dnum {{font-size:12px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--mono);margin-bottom:3px;}}
 .tod .dnum {{background:var(--accent);color:#fff;}}
-
+/* 月ビュー: 通常チップ */
 .mchip {{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;position:relative;}}
 .mchip.copied {{outline:2px solid var(--copy);}}
+/* 月ビュー: マージされたチップ（連続シフト） */
+.mchip-merged {{border-radius:3px;margin-bottom:2px;overflow:hidden;cursor:pointer;font-size:10px;font-weight:500;}}
+.mchip-seg {{padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+.mmore {{font-size:10px;color:var(--text-muted);cursor:pointer;padding:1px 4px;}}
+.mmore:hover {{color:var(--accent);}}
 
-.wbody, .dbody {{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
-.whdr, .dshdr {{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
-.whday, .dsch {{padding:7px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;font-weight:600;}}
-.wdcol, .dscol {{border-right:1px solid var(--border);position:relative;cursor:crosshair;min-height:1152px;}}
-.wdcol.paste-col, .dscol.paste-col {{cursor:copy;}}
+/* week */
+.week-view {{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
+.whdr {{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
+.whcorner {{padding:8px 0;}}
+.whday {{padding:7px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;}}
+.whday:hover {{background:var(--hover);}}
+.whday.paste-col:hover {{background:var(--paste-hover)!important;}}
+.wdow {{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}}
+.wdnum {{font-size:18px;font-weight:700;font-family:var(--mono);line-height:1.2;}}
+.whday.tod .wdnum {{color:var(--accent);}}
+.whday.sun .wdow,.whday.sun .wdnum {{color:#f87171;}}
+.whday.sat .wdow,.whday.sat .wdnum {{color:#60a5fa;}}
+.wbody {{flex:1;display:flex;overflow-y:auto;min-height:0;}}
+.wtimecol {{width:52px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);}}
+.wts {{height:48px;padding:4px 5px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
+.wdaycols {{flex:1;display:grid;grid-template-columns:repeat(7,1fr);}}
+.wdcol {{border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
+.wdcol.tod {{background:var(--today);}}
+.wdcol.paste-col {{cursor:copy;}}
+.wdcol.paste-col:hover {{background:var(--paste-hover)!important;}}
+.whs {{height:48px;border-bottom:1px solid var(--border);}}
 
+/* day */
+.day-view {{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
+.dshdr {{display:flex;border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;}}
+.dtcorner {{width:60px;min-width:60px;flex-shrink:0;padding:8px 4px;font-size:10px;color:var(--text-muted);text-align:center;border-right:1px solid var(--border);}}
+.dsch {{flex:1;min-width:90px;padding:7px 5px;text-align:center;border-right:1px solid var(--border);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+.dbody {{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
+.dtcol {{width:60px;min-width:60px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);}}
+.dts {{height:48px;padding:4px 6px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:right;}}
+.dts.midnight {{border-top:2px solid var(--accent2);color:var(--accent2);font-weight:700;}}
+.dscols {{flex:1;display:flex;overflow-x:auto;}}
+.dscol {{flex:1;min-width:90px;border-right:1px solid var(--border);position:relative;cursor:crosshair;}}
+.dscol.paste-col {{cursor:copy;}}
+.dscol.paste-col:hover {{background:var(--paste-hover)!important;}}
+.dhs {{height:48px;border-bottom:1px solid var(--border);}}
+.nextzone {{position:absolute;left:0;right:0;background:var(--nextday);border-top:1px dashed var(--accent2);pointer-events:none;z-index:0;}}
+.nowline {{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
+.nowline::before {{content:'';position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#f87171;}}
+
+/* shift block */
 .sb {{position:absolute;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;transition:filter .12s;border:1px solid rgba(255,255,255,.1);}}
 .sb:hover {{filter:brightness(1.25);z-index:4;}}
+.sb.copied {{outline:2px solid var(--copy);box-shadow:0 0 0 3px rgba(240,160,91,.3);z-index:2;}}
+.sbname {{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+.sbtime {{font-size:9px;opacity:.8;font-family:var(--mono);}}
+.drag-sel {{position:absolute;left:2px;right:2px;background:var(--drag);border:2px dashed var(--accent);border-radius:4px;z-index:10;pointer-events:none;}}
 
+/* modal */
 .ov {{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}}
-.modal {{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:400px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.6);}}
+.modal {{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:400px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.6);animation:mIn .18s ease;}}
+@keyframes mIn {{from {{transform:scale(.93);opacity:0;}}to {{transform:scale(1);opacity:1;}}}}
 .mtitle {{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}}
 .fg {{margin-bottom:12px;}}
 .fl {{display:block;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}}
-.fi,.fsel2 {{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--font);}}
+.fi,.fsel2 {{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--font);transition:border-color .15s;}}
+.fi:focus,.fsel2:focus {{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,138,240,.15);}}
+.trow {{display:grid;grid-template-columns:1fr 20px 1fr;align-items:center;gap:6px;}}
+.tsep {{color:var(--text-muted);text-align:center;}}
 .mact {{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}}
 .btn {{flex:1;padding:9px;border-radius:6px;border:none;font-size:13px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s;min-width:80px;}}
-.btn-p {{background:var(--accent);color:#fff;}}
-.btn-s {{background:var(--surface2);color:var(--text);border:1px solid var(--border);}}
-
-.toast {{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;color:#fff;}}
-.toast.ok {{background:var(--success);}}
-.ldg {{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9998;gap:10px;color:var(--text);}}
+.btn-p {{background:var(--accent);color:#fff;}}.btn-p:hover {{background:#4272d8;}}
+.btn-s {{background:var(--surface2);color:var(--text);border:1px solid var(--border);}}.btn-s:hover {{border-color:var(--accent);color:var(--accent);}}
+.btn-d {{background:var(--danger);color:#fff;flex:0;padding:9px 14px;}}.btn-d:hover {{background:#ef4444;}}
+.btn-c {{background:rgba(240,160,91,.2);color:var(--copy);border:1px solid var(--copy);flex:0;padding:9px 14px;}}.btn-c:hover {{background:var(--copy);color:#000;}}
+.btn-add {{background:var(--success);color:#fff;flex:0;padding:9px 14px;white-space:nowrap;}}.btn-add:hover {{background:#22c37e;}}
+.batch-list {{max-height:160px;overflow-y:auto;margin-bottom:8px;}}
+.batch-item {{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:12px;border:1px solid var(--border);}}
+.batch-item .bi-label {{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
+.batch-item .bi-del {{color:var(--danger);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11px;border:none;background:transparent;}}
+.batch-item .bi-del:hover {{background:rgba(248,113,113,.15);}}
+.batch-count {{font-size:11px;color:var(--text-muted);margin-bottom:8px;}}
+.dchip {{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;}}
+.drow {{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}}
+.drow:last-child {{border-bottom:none;}}.dicon {{font-size:15px;width:22px;text-align:center;}}
+.toast {{position:fixed;bottom:18px;right:18px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;animation:tIn .25s ease;max-width:300px;color:#fff;}}
+.toast.ok {{background:var(--success);box-shadow:0 6px 20px rgba(52,211,153,.4);}}
+.toast.err {{background:var(--danger);box-shadow:0 6px 20px rgba(248,113,113,.4);}}
+.toast.warn {{background:var(--warn);box-shadow:0 6px 20px rgba(245,158,11,.4);}}
+@keyframes tIn {{from {{transform:translateY(16px);opacity:0;}}to {{transform:translateY(0);opacity:1;}}}}
+.ldg {{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9998;gap:10px;font-size:13px;color:var(--text);}}
 .spin {{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}}
 @keyframes sp {{to {{transform:rotate(360deg);}}}}
 </style>
@@ -123,7 +196,10 @@ html,body {{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:v
       <button class="nb" onclick="nav(1)">&#8250;</button>
     </div>
     <button class="today-btn" onclick="goToday()">今日</button>
-    <div id="paste-banner"></div>
+    <div id="paste-banner">
+      <span id="paste-label">📋 ペーストモード</span>
+      <button onclick="cancelCopy()">キャンセル (Esc)</button>
+    </div>
     <div class="fgrp">
       <select class="fsel" id="fstaff" onchange="renderView()"><option value="">全スタッフ</option></select>
       <select class="fsel" id="fdept"  onchange="renderView()"><option value="">全部門</option></select>
@@ -134,21 +210,31 @@ html,body {{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:v
 
 <div class="ov" id="reg-ov" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
-    <div class="mtitle">📋 シフト登録</div>
+    <div class="mtitle">📋 シフト登録
+      <span id="reg-mode-label" style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:4px;"></span>
+    </div>
     <div class="fg"><label class="fl">従業員</label><select class="fsel2" id="m-staff"></select></div>
     <div class="fg"><label class="fl">部門</label><select class="fsel2" id="m-dept"></select></div>
     <div class="fg"><label class="fl">日付</label><input type="date" class="fi" id="m-date"></div>
     <div class="fg">
       <label class="fl">時間</label>
-      <div class="trow" style="display:grid; grid-template-columns:1fr 20px 1fr; align-items:center;">
+      <div class="trow">
         <input type="time" class="fi" id="m-start" value="09:00">
-        <div style="text-align:center;color:var(--text-muted)">→</div>
+        <div class="tsep">→</div>
         <input type="time" class="fi" id="m-end" value="18:00">
       </div>
     </div>
+    <div id="batch-section" style="display:none">
+      <div class="batch-count" id="batch-count"></div>
+      <div class="batch-list" id="batch-list"></div>
+    </div>
     <div class="mact">
       <button class="btn btn-s" onclick="closeReg()">閉じる</button>
-      <button class="btn btn-p" onclick="saveAll()">保存</button>
+      <button class="btn btn-add" onclick="addToBatch()">＋ リストに追加</button>
+      <button class="btn btn-p"  onclick="saveAll()">保存</button>
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
+      💡「リストに追加」で複数件まとめて登録できます。
     </div>
   </div>
 </div>
@@ -160,12 +246,13 @@ html,body {{width:100%;height:{COMPONENT_HEIGHT}px;overflow:hidden;font-family:v
     <div class="mact" style="margin-top:14px">
       <button class="btn btn-s" onclick="closeDet()">閉じる</button>
       <button class="btn btn-c" onclick="copyShift()">📋 コピー</button>
-      <button class="btn btn-d" onclick="delShift()" style="background:var(--danger);color:#fff">削除</button>
+      <button class="btn btn-d" onclick="delShift()">削除</button>
     </div>
   </div>
 </div>
 
 <script>
+// ═══ DATA ═══════════════════════════════
 const GAS   = "{gas_url}";
 const STAFF = {staff_json};
 const DEPTS = {dept_json};
@@ -179,21 +266,22 @@ function deptColor(d){{
   return CLRS[h%CLRS.length];
 }}
 function rgba(hex,a){{
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+  return `rgba(${{parseInt(hex.slice(1,3),16)}},${{parseInt(hex.slice(3,5),16)}},${{parseInt(hex.slice(5,7),16)}},${{a}})`;
 }}
 
+// ═══ CONSTANTS ═══════════════════════
 const DAYS=['日','月','火','水','木','金','土'];
 const MONS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 const HPX=48, DAY_H=30, MID_H=24;
+const MERGE_GAP_MINS = 5; // 月ビューでこの分以内なら連続とみなしてマージ
 
+// ═══ STATE ════════════════════════════
 let view='day';
 let cur=new Date(); cur.setHours(0,0,0,0);
 let batchQueue=[];
-let clipShift=null;
+let clipShift=null; // コピーされたシフト
 
+// ═══ INIT ════════════════════════════
 window.onload=()=>{{
   ['fstaff','m-staff'].forEach(id=>STAFF.forEach(s=>$$(id).appendChild(new Option(s,s))));
   ['fdept', 'm-dept' ].forEach(id=>DEPTS.forEach(d=>$$(id).appendChild(new Option(d,d))));
@@ -202,11 +290,20 @@ window.onload=()=>{{
 
 function $$(id){{return document.getElementById(id);}}
 function mk(t,c){{const e=document.createElement(t);if(c)e.className=c;return e;}}
-function fmt(d){{return d.getFullYear() + "-" + p2(d.getMonth()+1) + "-" + p2(d.getDate());}}
+function fmt(d){{return`${{d.getFullYear()}}-${{p2(d.getMonth()+1)}}-${{p2(d.getDate())}}`;}}
 function p2(n){{return String(n).padStart(2,'0');}}
 function today(){{return fmt(new Date());}}
 function pd(s){{return new Date(s);}}
+function m2t(m){{const mm=m%1440;return`${{p2(Math.floor(mm/60))}}:${{p2(mm%60)}}`;}}
+function shOn(ds,arr){{return arr.filter(s=>s.start&&fmt(pd(s.start))===ds);}}
+function filtered(){{
+  const fs=$$('fstaff')?.value||'',fd=$$('fdept')?.value||'';
+  return SHIFTS.filter(s=>(!fs||s.staff===fs)&&(!fd||s.dept===fd));
+}}
+function sMins(s){{const d=pd(s.start);return d.getHours()*60+d.getMinutes();}}
+function eMins(s){{const d=pd(s.end);return d.getHours()*60+d.getMinutes();}}
 
+// ═══ VIEW ════════════════════════════
 function setView(v){{
   view=v;
   document.querySelectorAll('.vt').forEach((e,i)=>e.classList.toggle('on',['day','week','month'][i]===v));
@@ -219,7 +316,6 @@ function nav(d){{
   renderView();
 }}
 function goToday(){{cur=new Date();cur.setHours(0,0,0,0);renderView();}}
-
 function renderView(){{
   if(view==='day') renderDay();
   else if(view==='week') renderWeek();
@@ -227,29 +323,36 @@ function renderView(){{
   updatePasteBanner();
 }}
 
+// ═══ COPY / PASTE ════════════════════
 function copyShift(){{
   closeDet();
-  clipShift=Object.assign({{}}, curS);
+  clipShift={{...curS}};
   updatePasteBanner();
-  showToast('📋 コピーモード：日付をクリックして選択してください');
+  showToast('📋 コピーしました。貼り付け先の日付をクリックしてください','ok',4000);
+  renderView();
+}}
+function cancelCopy(){{
+  clipShift=null;
+  batchQueue=[]; // キューもクリア
+  updatePasteBanner();
   renderView();
 }}
 
-function cancelCopy(){{
-  clipShift=null; batchQueue=[]; updatePasteBanner(); renderView();
-}}
-
+// バナーと連続ペーストの処理を修正しました
 function updatePasteBanner(){{
   const b=$$('paste-banner');
   if(clipShift){{
     b.style.display='flex';
     const count = batchQueue.length;
-    const btnLabel = count > 0 ? "✅ " + count + "件分を保存確定" : "選択を完了";
-    b.innerHTML = '<span style="flex:1">📋 ' + clipShift.staff + ' / ' + clipShift.dept + ' (' + count + '件選択中)</span>' +
-      '<div style="display:flex; gap:8px;">' +
-        '<button onclick="saveAll()" style="background:var(--success); color:#fff; border:none; padding:4px 12px; border-radius:4px;">' + btnLabel + '</button>' +
-        '<button onclick="cancelCopy()">中止</button>' +
-      '</div>';
+    b.innerHTML = `
+      <span id="paste-label" style="flex:1">📋 ${{clipShift.staff}} / ${{clipShift.dept}} (${{count}}件選択中)</span>
+      <div style="display:flex; gap:8px;">
+        <button onclick="saveAll()" style="background:var(--success); color:#fff; border:none; padding:3px 10px; font-weight:700;">
+          ${{count > 0 ? '✅ 確定保存' : '閉じる'}}
+        </button>
+        <button onclick="cancelCopy()">キャンセル</button>
+      </div>
+    `;
   }} else {{
     b.style.display='none';
   }}
@@ -258,16 +361,26 @@ function updatePasteBanner(){{
 function pasteToDate(dateStr){{
   if(!clipShift) return;
   const s=pd(clipShift.start),et=pd(clipShift.end);
-  const startT = p2(s.getHours()) + ":" + p2(s.getMinutes());
-  const endT = p2(et.getHours()) + ":" + p2(et.getMinutes());
-  batchQueue.push({{ staff: clipShift.staff, dept: clipShift.dept, date: dateStr, start: startT, end: endT }});
+  const startT = `${{p2(s.getHours())}}:${{p2(s.getMinutes())}}`;
+  const endT = `${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
+  
+  // 登録画面を開かず、直接リストに追加します
+  batchQueue.push({{
+    staff: clipShift.staff,
+    dept: clipShift.dept,
+    date: dateStr,
+    start: startT,
+    end: endT
+  }});
+  
   updatePasteBanner();
-  showToast("➕ " + dateStr + " を追加", 'ok', 1000);
+  showToast(`➕ ${{dateStr}} をリストに追加しました`,'ok',1500);
 }}
 
+// ═══ MONTH ═══════════════════════════
 function renderMonth(){{
   const y=cur.getFullYear(),mo=cur.getMonth();
-  $$('plabel').textContent=y + "年 " + MONS[mo];
+  $$('plabel').textContent=`${{y}}年 ${{MONS[mo]}}`;
   const td=today(), fil=filtered();
   const first=new Date(y,mo,1),sdow=first.getDay(),dim=new Date(y,mo+1,0).getDate(),prev=new Date(y,mo,0).getDate();
   let cells=[];
@@ -284,25 +397,82 @@ function renderMonth(){{
   for(let r=0;r<6;r++){{
     const row=mk('div','mrow');
     cells.slice(r*7,r*7+7).forEach(cell=>{{
-      const cd=new Date(cell.y,cell.m,cell.d),ds=fmt(cd);
-      const mc=mk('div', "mcell" + (cell.o?' other':'') + (ds===td?' tod':'') + (clipShift?' paste-target':''));
+      const cd=new Date(cell.y,cell.m,cell.d),ds=fmt(cd),dow=cd.getDay();
+      const mc=mk('div',`mcell${{cell.o?' other':''}}${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{clipShift?' paste-target':''}}`);
       const dn=mk('div','dnum'); dn.textContent=cell.d; mc.appendChild(dn);
-      
+
+      // クリック判定を修正：ペーストモード時はpasteToDateを優先します
       mc.onclick=(e)=>{{
-        e.stopPropagation();
+        if(e.target.classList.contains('mchip')||e.target.classList.contains('mchip-seg')) return;
         if(clipShift) pasteToDate(ds);
-        else if(!e.target.classList.contains('mchip')) openReg(ds);
+        else openReg(ds);
       }};
 
-      shOn(ds,fil).forEach(s=>{{
-          const col=deptColor(s.dept);
-          const ch=mk('div','mchip');
-          ch.style.cssText="background:" + rgba(col,.25) + ";color:" + col + ";border-left:3px solid " + col;
-          const st=pd(s.start),et=pd(s.end);
-          ch.textContent=s.staff + " " + p2(st.getHours()) + ":" + p2(st.getMinutes()) + "-" + p2(et.getHours()) + ":" + p2(et.getMinutes());
-          ch.onclick=e=>{{e.stopPropagation(); if(clipShift) pasteToDate(ds); else showDet(s); }};
-          mc.appendChild(ch);
+      const dayShifts=shOn(ds,fil);
+      const staffGroups={{}};
+      dayShifts.forEach(s=>{{
+        if(!staffGroups[s.staff]) staffGroups[s.staff]=[];
+        staffGroups[s.staff].push(s);
       }});
+      const displayItems=[];
+      Object.values(staffGroups).forEach(shifts=>{{
+        shifts.sort((a,b)=>sMins(a)-sMins(b));
+        let i=0;
+        while(i<shifts.length){{
+          let group=[shifts[i]];
+          while(i+1<shifts.length && eMins(shifts[i])+MERGE_GAP_MINS >= sMins(shifts[i+1])){{
+            i++;
+            group.push(shifts[i]);
+          }}
+          displayItems.push(group);
+          i++;
+        }}
+      }});
+
+      const maxShow=3;
+      displayItems.slice(0,maxShow).forEach(group=>{{
+        const first=group[0], last=group[group.length-1];
+        const col=deptColor(first.dept);
+        const isCopied=clipShift&&first.staff===clipShift.staff&&first.start===clipShift.start;
+        if(group.length===1){{
+          const ch=mk('div','mchip'+(isCopied?' copied':''));
+          ch.style.cssText=`background:${{rgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
+          const st=pd(first.start),et=pd(first.end);
+          ch.textContent=`${{first.staff}} ${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;
+          ch.onclick=e=>{{
+            e.stopPropagation();
+            if(clipShift) pasteToDate(ds);
+            else showDet(first);
+          }};
+          mc.appendChild(ch);
+        }} else {{
+          const merged=mk('div','mchip-merged'+(isCopied?' copied':''));
+          merged.style.borderLeft=`3px solid ${{col}}`;
+          merged.style.background=rgba(col,.12);
+          merged.style.color=col;
+          const st0=pd(first.start),etN=pd(last.end);
+          const hdr=mk('div','mchip-seg');
+          hdr.style.cssText=`background:${{rgba(col,.3)}};font-weight:700;`;
+          hdr.textContent=`${{first.staff}} ${{p2(st0.getHours())}}:${{p2(st0.getMinutes())}}-${{p2(etN.getHours())}}:${{p2(etN.getMinutes())}}`;
+          merged.appendChild(hdr);
+          group.forEach(s=>{{
+            const seg=mk('div','mchip-seg');
+            const sst=pd(s.start),set=pd(s.end);
+            seg.style.cssText=`background:${{rgba(col,.15)}};font-size:9px;border-top:1px solid ${{rgba(col,.2)}};`;
+            seg.textContent=`${{s.dept}} ${{p2(sst.getHours())}}:${{p2(sst.getMinutes())}}-${{p2(set.getHours())}}:${{p2(set.getMinutes())}}`;
+            seg.onclick=e=>{{
+              e.stopPropagation();
+              if(clipShift) pasteToDate(ds);
+              else showDet(s);
+            }};
+            merged.appendChild(seg);
+          }});
+          mc.appendChild(merged);
+        }}
+      }});
+      if(displayItems.length>maxShow){{
+        const mm=mk('div','mmore');mm.textContent=`+${{displayItems.length-maxShow}}件`;mc.appendChild(mm);
+      }}
       row.appendChild(mc);
     }});
     mg.appendChild(row);
@@ -310,125 +480,340 @@ function renderMonth(){{
   mv.appendChild(mg); root.appendChild(mv);
 }}
 
+// ═══ WEEK ═══════════════════════════
+function wkStart(d){{const r=new Date(d);r.setDate(r.getDate()-r.getDay());return r;}}
+
+function calcLanes(shifts){{
+  const sorted=[...shifts].sort((a,b)=>a.sm-b.sm);
+  const lanes=[];
+  sorted.forEach(s=>{{
+    let lane=-1;
+    for(let i=0;i<lanes.length;i++){{
+      if(lanes[i]<=s.sm){{lane=i;lanes[i]=s.em;break;}}
+    }}
+    if(lane===-1){{lane=lanes.length;lanes.push(s.em);}}
+    s.lane=lane;
+  }});
+  const total=lanes.length;
+  sorted.forEach(s=>s.totalLanes=total);
+  return sorted;
+}}
+
 function renderWeek(){{
-  const ws=new Date(cur); ws.setDate(ws.getDate()-ws.getDay());
-  $$('plabel').textContent=(ws.getMonth()+1) + "月 " + ws.getDate() + "日の週";
+  const ws=wkStart(cur),we=new Date(ws);we.setDate(we.getDate()+6);
+  const [y1,m1,d1]=[ws.getFullYear(),ws.getMonth()+1,ws.getDate()];
+  const [y2,m2,d2]=[we.getFullYear(),we.getMonth()+1,we.getDate()];
+  $$('plabel').textContent=y1===y2?`${{y1}}年${{m1}}/${{d1}}-${{m2}}/${{d2}}`:`${{y1}}/${{m1}}/${{d1}}-${{y2}}/${{m2}}/${{d2}}`;
   const td=today(),fil=filtered();
   const root=$$('cal'); root.innerHTML='';
   const wv=mk('div','week-view');
-  const wb=mk('div','wbody');
-  const dc=mk('div','wdaycols');
-  dc.style.display='grid'; dc.style.gridTemplateColumns='repeat(7,1fr)'; dc.style.flex='1';
-
+  const wh=mk('div','whdr'); wh.appendChild(mk('div','whcorner'));
   for(let i=0;i<7;i++){{
-    const d=new Date(ws); d.setDate(d.getDate()+i);
-    const ds=fmt(d);
-    const col=mk('div', "wdcol" + (ds===td?' tod':'') + (clipShift?' paste-col':''));
-    col.innerHTML='<div style="text-align:center;padding:5px;border-bottom:1px solid var(--border);font-weight:700;">' + d.getDate() + '(' + DAYS[i] + ')</div>';
+    const d=new Date(ws);d.setDate(d.getDate()+i);
+    const ds=fmt(d),dow=d.getDay();
+    const isPaste=!!clipShift;
+    const hd=mk('div',`whday${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{isPaste?' paste-col':''}}`);
+    hd.innerHTML=`<div class="wdow">${{DAYS[dow]}}</div><div class="wdnum">${{d.getDate()}}</div>`;
+    hd.onclick=()=>{{
+      if(clipShift)pasteToDate(ds);
+      else{{cur=new Date(d);setView('day');}}
+    }};
+    wh.appendChild(hd);
+  }}
+  wv.appendChild(wh);
+  const wb=mk('div','wbody');
+  const tc=mk('div','wtimecol');
+  for(let h=0;h<24;h++){{const ts=mk('div','wts');ts.textContent=h?p2(h)+':00':'';tc.appendChild(ts);}}
+  wb.appendChild(tc);
+  const dc=mk('div','wdaycols');
+  for(let i=0;i<7;i++){{
+    const d=new Date(ws);d.setDate(d.getDate()+i);
+    const ds=fmt(d),dow=d.getDay();
+    const isPaste=!!clipShift;
+    const col=mk('div',`wdcol${{ds===td?' tod':''}}${{isPaste?' paste-col':''}}`);
     for(let h=0;h<24;h++) col.appendChild(mk('div','whs'));
-    col.onclick=()=>{{ if(clipShift) pasteToDate(ds); else openReg(ds); }};
-    shOn(ds,fil).forEach(s=>{{
-       const st=pd(s.start), et=pd(s.end);
-       const sm=st.getHours()*60+st.getMinutes(), em=et.getHours()*60+et.getMinutes();
-       const top=sm/60*HPX+30, ht=Math.max((em-sm)/60*HPX,20);
-       const colr=deptColor(s.dept);
-       const b=mk('div','sb');
-       b.style.cssText="top:" + top + "px;height:" + ht + "px;background:" + rgba(colr,.3) + ";border-left:3px solid " + colr + ";color:" + colr + ";width:95%;left:2.5%;";
-       b.innerHTML='<div class="sbname">' + s.staff + '</div>';
-       b.onclick=e=>{{ e.stopPropagation(); if(clipShift) pasteToDate(ds); else showDet(s); }};
-       col.appendChild(b);
+
+    if(!isPaste) dragWeek(col,ds);
+
+    const dayShifts=shOn(ds,fil).map(s=>{{
+      return {{...s, sm:sMins(s), em:eMins(s)||1440}};
     }});
+    const laid=calcLanes(dayShifts);
+    laid.forEach(s=>{{
+      const b=blockW(s,true,0,s.lane,s.totalLanes);
+      col.appendChild(b);
+    }});
+
+    if(isPaste) col.addEventListener('click',()=>pasteToDate(ds));
+
     dc.appendChild(col);
   }}
-  wb.appendChild(dc); wv.appendChild(wb); root.appendChild(wv);
+  wb.appendChild(dc);wv.appendChild(wb);root.appendChild(wv);
 }}
 
+// ═══ DAY ══════════════════════════════
 function renderDay(){{
-  const ds=fmt(cur),fil=filtered();
-  $$('plabel').textContent=ds;
+  const y=cur.getFullYear(),mo=cur.getMonth()+1,d=cur.getDate(),dow=cur.getDay();
+  $$('plabel').textContent=`${{y}}年${{mo}}月${{d}}日（${{DAYS[dow]}}）`;
+  const ds=fmt(cur),td=today(),fil=filtered();
+  const nxt=new Date(cur);nxt.setDate(nxt.getDate()+1);const dsN=fmt(nxt);
+  const fsv=$$('fstaff')?.value||'';
+  const staff=fsv?[fsv]:STAFF;
   const root=$$('cal'); root.innerHTML='';
+  if(!staff.length){{
+    root.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:12px;"><div style="font-size:32px">👥</div><div>スタッフを登録してください</div></div>';
+    return;
+  }}
+  const isPaste=!!clipShift;
   const dv=mk('div','day-view');
+  const sh=mk('div','dshdr');
+  const corn=mk('div','dtcorner');
+  corn.innerHTML=ds===td?'<span style="color:var(--accent);font-weight:700;font-size:11px">今日</span>':'';
+  sh.appendChild(corn);
+  staff.forEach(s=>{{const h=mk('div','dsch');h.textContent=s;sh.appendChild(h);}});
+  dv.appendChild(sh);
   const db=mk('div','dbody');
+  const tc=mk('div','dtcol');
+  for(let h=0;h<DAY_H;h++){{
+    const ts=mk('div','dts'+(h===MID_H?' midnight':''));
+    if(h===0) ts.textContent='';
+    else if(h===MID_H) ts.textContent='翌0:00';
+    else if(h>MID_H) ts.textContent=p2(h-24)+':00';
+    else ts.textContent=p2(h)+':00';
+    tc.appendChild(ts);
+  }}
+  db.appendChild(tc);
   const sc=mk('div','dscols');
-  sc.style.display='flex'; sc.style.flex='1';
-  const staff=STAFF.length?STAFF:['スタッフ未登録'];
   staff.forEach(s=>{{
-    const col=mk('div', "dscol" + (clipShift?' paste-col':''));
-    col.style.flex='1';
-    col.innerHTML='<div style="text-align:center;padding:5px;border-bottom:1px solid var(--border);font-weight:700;">' + s + '</div>';
-    for(let h=0;h<24;h++) col.appendChild(mk('div','dhs'));
-    col.onclick=()=>{{ if(clipShift) pasteToDate(ds); else openReg(ds, '09:00', '18:00', s); }};
-    fil.filter(x=>x.staff===s && fmt(pd(x.start))===ds).forEach(x=>{{
-       const st=pd(x.start), et=pd(x.end);
-       const sm=st.getHours()*60+st.getMinutes(), em=et.getHours()*60+et.getMinutes();
-       const top=sm/60*HPX+30, ht=Math.max((em-sm)/60*HPX,20);
-       const colr=deptColor(x.dept);
-       const b=mk('div','sb');
-       b.style.cssText="top:" + top + "px;height:" + ht + "px;background:" + rgba(colr,.3) + ";border-left:3px solid " + colr + ";color:" + colr + ";width:95%;left:2.5%;";
-       b.innerHTML='<div class="sbname">' + x.dept + '</div>';
-       b.onclick=e=>{{ e.stopPropagation(); if(clipShift) pasteToDate(ds); else showDet(x); }};
-       col.appendChild(b);
-    }});
+    const col=mk('div','dscol'+(isPaste?' paste-col':''));
+    for(let h=0;h<DAY_H;h++) col.appendChild(mk('div','dhs'));
+    const nz=mk('div','nextzone');
+    nz.style.top=MID_H*HPX+'px';nz.style.bottom='0';
+    col.appendChild(nz);
+    if(isPaste){{
+      col.addEventListener('click',e=>{{
+        if(e.target.classList.contains('sb'))return;
+        pasteToDate(ds);
+      }});
+    }} else {{
+      dragDay(col,ds,dsN,s);
+    }}
+    fil.filter(x=>x.staff===s&&x.start&&fmt(pd(x.start))===ds)
+       .forEach(x=>col.appendChild(blockW(x,false,0,0,1)));
+    fil.filter(x=>x.staff===s&&x.start&&fmt(pd(x.start))===dsN)
+       .forEach(x=>{{
+         const h=pd(x.start).getHours();
+         if(h<(DAY_H-MID_H)) col.appendChild(blockW(x,false,1440,0,1));
+       }});
     sc.appendChild(col);
   }});
-  db.appendChild(sc); dv.appendChild(db); root.appendChild(dv);
+  db.appendChild(sc);dv.appendChild(db);root.appendChild(dv);
 }}
 
-function openReg(dateStr,startT,endT,staffName){{
-  $$('m-date').value=dateStr||today();
+// ═══ SHIFT BLOCK（レーン対応）════════════
+function blockW(s,showStaff,offsetMins,lane,totalLanes){{
+  const st=pd(s.start),et=pd(s.end);
+  const sm=st.getHours()*60+st.getMinutes()+offsetMins;
+  const em=et.getHours()*60+et.getMinutes()+offsetMins;
+  const top=sm/60*HPX, ht=Math.max((em-sm)/60*HPX,16);
+  const col=deptColor(s.dept);
+  const isCopied=clipShift&&s.staff===clipShift.staff&&s.start===clipShift.start;
+  const b=mk('div','sb'+(isCopied?' copied':''));
+  const W=100/totalLanes;
+  const L=lane*W;
+  b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};left:${{L+0.5}}%;width:${{W-1}}%;right:auto;`;
+  const nm=mk('div','sbname');nm.textContent=showStaff?s.staff:s.dept;b.appendChild(nm);
+  if(ht>28){{const tm=mk('div','sbtime');tm.textContent=`${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`;b.appendChild(tm);}}
+  b.onclick=e=>{{
+    e.stopPropagation();
+    if(clipShift) {{
+      const dStr = fmt(pd(s.start));
+      pasteToDate(dStr);
+    }} else {{
+      showDet(s);
+    }}
+  }};
+  return b;
+}}
+
+// ═══ DRAG ════════════════════════════
+let ds_state=null;
+function y2m(y){{return y/HPX*60;}}
+function snap(m){{return Math.round(m/15)*15;}}
+function dragWeek(col,dateStr){{
+  let el=null;
+  col.addEventListener('mousedown',e=>{{
+    if(e.button||e.target.classList.contains('sb')) return; e.preventDefault();
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.wbody')?.scrollTop||0);
+    const sm=snap(y2m(y));
+    el=mk('div','drag-sel');el.style.top=sm/60*HPX+'px';el.style.height='0';col.appendChild(el);
+    ds_state={{col,date:dateStr,staff:null,sm,em:sm,el}};
+  }});
+  col.addEventListener('mousemove',e=>{{
+    if(!ds_state||ds_state.col!==col)return;
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.wbody')?.scrollTop||0);
+    const em=snap(y2m(y));
+    el.style.top=Math.min(ds_state.sm,em)/60*HPX+'px';el.style.height=Math.abs(em-ds_state.sm)/60*HPX+'px';
+    ds_state.em=em;
+  }});
+  col.addEventListener('mouseup',()=>{{
+    if(!ds_state||ds_state.col!==col)return;
+    const s=Math.min(ds_state.sm,ds_state.em),en=Math.max(ds_state.sm,ds_state.em);
+    el.remove();const d=ds_state.date;ds_state=null;
+    openReg(d,m2t(s),m2t(en-s<15?s+60:en));
+  }});
+}}
+function dragDay(col,dateStr,dateStrN,staffName){{
+  let el=null;
+  col.addEventListener('mousedown',e=>{{
+    if(e.button||e.target.classList.contains('sb')) return; e.preventDefault();
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.dbody')?.scrollTop||0);
+    const sm=Math.min(snap(y2m(y)),DAY_H*60);
+    el=mk('div','drag-sel');el.style.top=sm/60*HPX+'px';el.style.height='0';col.appendChild(el);
+    ds_state={{col,date:dateStr,dateN:dateStrN,staff:staffName,sm,em:sm,el}};
+  }});
+  col.addEventListener('mousemove',e=>{{
+    if(!ds_state||ds_state.col!==col)return;
+    const y=e.clientY-col.getBoundingClientRect().top+(col.closest('.dbody')?.scrollTop||0);
+    const em=Math.min(snap(y2m(y)),DAY_H*60);
+    el.style.top=Math.min(ds_state.sm,em)/60*HPX+'px';el.style.height=Math.abs(em-ds_state.sm)/60*HPX+'px';
+    ds_state.em=em;
+  }});
+  col.addEventListener('mouseup',()=>{{
+    if(!ds_state||ds_state.col!==col)return;
+    const s=Math.min(ds_state.sm,ds_state.em),en=Math.max(ds_state.sm,ds_state.em);
+    const isN=s>=1440,actualDate=isN?ds_state.dateN:ds_state.date,stf=ds_state.staff;
+    el.remove();ds_state=null;
+    openReg(actualDate,m2t(s),m2t(en-s<15?s+60:en),stf);
+  }});
+}}
+document.addEventListener('mouseup',()=>{{if(ds_state?.el)ds_state.el.remove();ds_state=null;}});
+
+// ═══ MODAL ═════════════════════════
+function openReg(dateStr,startT,endT,staffName,deptName){{
+  $$('m-date').value=dateStr||fmt(cur);
   $$('m-start').value=startT||'09:00';
   $$('m-end').value=endT||'18:00';
-  if(staffName) $$('m-staff').value=staffName;
+  if(staffName){{
+    const sel=$$('m-staff');
+    for(const o of sel.options) if(o.value===staffName){{sel.value=staffName;break;}}
+  }}
+  if(deptName){{
+    const sel=$$('m-dept');
+    for(const o of sel.options) if(o.value===deptName){{sel.value=deptName;break;}}
+  }}
+  renderBatchUI();
   $$('reg-ov').style.display='flex';
 }}
-function closeReg(){{ $$('reg-ov').style.display='none'; }}
-
+function closeReg(){{
+  $$('reg-ov').style.display='none';
+  batchQueue=[];
+  renderBatchUI();
+}}
+function addToBatch(){{
+  const staff=$$('m-staff').value,dept=$$('m-dept').value;
+  const date=$$('m-date').value,s=$$('m-start').value,e=$$('m-end').value;
+  if(!staff||!dept||!date||!s||!e){{alert('すべて入力してください');return;}}
+  if(s>=e){{alert('終了は開始より後にしてください');return;}}
+  batchQueue.push({{staff,dept,date,start:s,end:e}});
+  renderBatchUI();
+  showToast(`➕ ${{staff}} ${{s}}-${{e}}`,'ok',2000);
+}}
+function renderBatchUI(){{
+  const sec=$$('batch-section'),list=$$('batch-list'),cnt=$$('batch-count'),lbl=$$('reg-mode-label');
+  if(batchQueue.length===0){{sec.style.display='none';lbl.textContent='';return;}}
+  sec.style.display='block';
+  lbl.textContent=`（キュー: ${{batchQueue.length}}件）`;
+  cnt.textContent=`登録予定: ${{batchQueue.length}} 件`;
+  list.innerHTML='';
+  batchQueue.forEach((item,i)=>{{
+    const row=mk('div','batch-item');
+    const lbl2=mk('div','bi-label');lbl2.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.date}} ${{item.start}}-${{item.end}}`;
+    const del=mk('button','bi-del');del.textContent='✕';del.onclick=()=>{{batchQueue.splice(i,1);renderBatchUI();}};
+    row.appendChild(lbl2);row.appendChild(del);list.appendChild(row);
+  }});
+}}
 async function saveAll(){{
-  let items = batchQueue.length > 0 ? Array.from(batchQueue) : [{{
-    staff:$$('m-staff').value, dept:$$('m-dept').value, date:$$('m-date').value, start:$$('m-start').value, end:$$('m-end').value
-  }}];
-  if(!items[0].staff || items[0].start >= items[0].end) return;
-  closeReg(); showLdg(items.length + "件 保存中...");
-  let ok=0;
+  let items=[];
+  if(batchQueue.length>0){{
+    items=[...batchQueue];
+  }} else {{
+    const staff=$$('m-staff').value,dept=$$('m-dept').value;
+    const date=$$('m-date').value,s=$$('m-start').value,e=$$('m-end').value;
+    if(!staff||!dept||!date||!s||!e){{alert('すべて入力してください');return;}}
+    if(s>=e){{alert('終了は開始より後にしてください');return;}}
+    items=[{{staff,dept,date,start:s,end:e}}];
+  }}
+  closeReg();showLdg(`${{items.length}}件 保存中...`);
+  let ok=0,fail=0;
   for(const item of items){{
     try{{
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,start:item.date + " " + item.start,end:item.date + " " + item.end}}));
-      SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,start:item.date + "T" + item.start + ":00",end:item.date + "T" + item.end + ":00"}});
+      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,start:`${{item.date}} ${{item.start}}`,end:`${{item.date}} ${{item.end}}`}}));
+      SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,start:`${{item.date}}T${{item.start}}:00`,end:`${{item.date}}T${{item.end}}:00`}});
       ok++;
-    }}catch(e){{}}
+    }}catch{{fail++;}}
   }}
-  clipShift = null; batchQueue = []; hideLdg(); showToast("✅ " + ok + "件 保存完了"); renderView();
+  // 連続ペーストを終了し、状態をクリアします
+  clipShift = null; 
+  batchQueue = [];
+  hideLdg();
+  if(fail===0) showToast(`✅ ${{ok}}件 保存しました`,'ok');
+  else showToast(`⚠️ ${{ok}}件成功 / ${{fail}}件失敗`,'warn');
+  renderView();
 }}
 
-let curS=null;
+// ═══ DETAIL / DELETE ════════════════
+let curS=null,curI=-1;
 function showDet(s){{
-  curS=s; const st=pd(s.start),et=pd(s.end),col=deptColor(s.dept);
-  $$('det-body').innerHTML='<div style="font-weight:700;color:' + col + '">' + s.staff + ' (' + s.dept + ')</div><div>📅 ' + fmt(st) + '</div><div>🕐 ' + p2(st.getHours()) + ':' + p2(st.getMinutes()) + ' - ' + p2(et.getHours()) + ':' + p2(et.getMinutes()) + '</div>';
+  curS=s;curI=SHIFTS.indexOf(s);
+  const st=pd(s.start),et=pd(s.end),col=deptColor(s.dept);
+  $$('det-body').innerHTML=`
+    <span class="dchip" style="background:${{rgba(col,.25)}};color:${{col}}">${{s.dept}}</span>
+    <div class="drow"><span class="dicon">👤</span><span>${{s.staff}}</span></div>
+    <div class="drow"><span class="dicon">📅</span><span>${{fmt(st)}}</span></div>
+    <div class="drow"><span class="dicon">🕐</span><span>${{p2(st.getHours())}}:${{p2(st.getMinutes())}} → ${{p2(et.getHours())}}:${{p2(et.getMinutes())}}</span></div>
+    <div class="drow"><span class="dicon">⏱️</span><span>${{Math.round((et-st)/60000)}}分</span></div>`;
   $$('det-ov').style.display='flex';
 }}
-function closeDet(){{ $$('det-ov').style.display='none'; }}
-
+function closeDet(){{$$('det-ov').style.display='none';curS=null;}}
 async function delShift(){{
-  if(!curS || !confirm('削除しますか？')) return;
-  const s=curS; closeDet(); showLdg('削除中...');
+  if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`))return;
+  const s=curS;closeDet();showLdg('削除中...');
+  const norm=iso=>iso.replace('T',' ').replace(/(\\d{{4}}-\\d{{2}}-\\d{{2}} \\d{{2}}:\\d{{2}}).*$/,'$1');
+  let ok=false;
   try{{
-    const startStr = s.start.replace('T',' ').substring(0,16);
-    await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,start:startStr}}));
-    SHIFTS = SHIFTS.filter(x=>!(x.staff===s.staff && x.start===s.start));
-  }}catch(e){{}}
-  hideLdg(); renderView();
+    const r=await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,start:norm(s.start),end:norm(s.end)}}));
+    const t=await r.text();
+    ok=r.ok&&(t.toLowerCase().includes('delet')||t.toLowerCase().includes('ok')||t.trim().length===0);
+  }}catch(e){{console.warn(e);}}
+  const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
+  if(i>=0)SHIFTS.splice(i,1);
+  hideLdg();
+  ok?showToast('🗑️ 削除しました','ok'):showToast('🗑️ 画面から削除（GAS側も要確認）','warn');
+  renderView();
 }}
 
-function showToast(msg,type='ok',dur=2000){{
-  const t=mk('div', "toast " + type); t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),dur);
+// ═══ HELPERS ════════════════════════
+function showToast(msg,type='ok',dur=3500){{
+  const t=mk('div',`toast ${{type}}`);t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),dur);
 }}
-function showLdg(msg){{
-  const l=mk('div','ldg'); l.id='ldg';
-  l.innerHTML='<div class="spin"></div><span>' + msg + '</span>';
+function showLdg(msg='処理中...'){{
+  const l=mk('div','ldg');l.id='ldg';
+  l.innerHTML=`<div class="spin"></div><span>${{msg}}</span>`;
   document.body.appendChild(l);
 }}
-function hideLdg(){{ $$('ldg')?.remove(); }}
+function hideLdg(){{$$('ldg')?.remove();}}
+document.addEventListener('keydown',e=>{{
+  if(e.key==='Escape'){{
+    if(clipShift)cancelCopy();
+    closeReg();closeDet();
+  }}
+  if(!e.target.matches('input,select,textarea')){{
+    if(e.key==='ArrowLeft') nav(-1);
+    if(e.key==='ArrowRight') nav(1);
+  }}
+}});
 </script>
 </body>
 </html>"""
