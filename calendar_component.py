@@ -349,7 +349,6 @@ function updatePasteBanner(){{
   }}
 }}
 
-# 修正後
 function pasteToDate(dateStr){{
   if(!clipShift) return;
   const st=pd(clipShift.start),et=pd(clipShift.end);
