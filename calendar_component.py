@@ -1019,69 +1019,36 @@ function renderBatchUI() {{
   }});
 }}
 
-async function saveAll() {
-  // ─── 編集モード ───
-  if(editMode && editOrig) {
-    const staff = $$('mStaff').value;
-    const dept = $$('mDept').value;
-    const {startDt, endDt, valid} = getStartEnd(); // getStartEndは "YYYY-MM-DD HH:MM" を返す
-    
-    if(!staff || !dept || !$$('mDate').value) { alert('すべて入力してください'); return; }
-    if(!valid) { alert('時間が不正です'); return; }
-    
-    closeReg(); 
-    showLdg('更新中...');
-
-    // GASに送るためのフォーマット整形 (ISOから秒を除いた YYYY-MM-DD HH:MM に)
-    const toGasFmt = (iso) => iso.replace('T', ' ').substring(0, 16);
-    const oldStart =惊toGasFmt(editOrig.start);
-    const oldEnd   = toGasFmt(editOrig.end);
-
-    try {
-      // 1. 旧データを削除
-      const delRes = await fetch(GAS + '?' + new URLSearchParams({
-        action: 'del_shift',
-        name:   editOrig.staff,
-        dept:   editOrig.dept,
-        start:  oldStart,
-        end:    oldEnd
-      }));
-
-      // 2. 新データを追加
-      const addRes = await fetch(GAS + '?' + new URLSearchParams({
-        action: 'add_shift',
-        name:   staff,
-        dept:   dept,
-        start:  startDt,
-        end:    endDt
-      }));
-
-      // 3. ローカルの SHIFTS 配列を更新 (表示に即時反映させるため)
-      // ID（rowIndex）やその他のプロパティを維持しつつ上書き
-      const idx = SHIFTS.findIndex(x => 
-        x.staff === editOrig.staff && 
-        x.start === editOrig.start && 
-        x.dept  === editOrig.dept
-      );
-
-      if (idx >= 0) {
-        SHIFTS[idx].staff = staff;
-        SHIFTS[idx].dept  = dept;
-        SHIFTS[idx].start = startDt.replace(' ', 'T') + ':00';
-        SHIFTS[idx].end   = endDt.replace(' ', 'T') + ':00';
-      }
-
-      hideLdg();
-      showToast('✅ 更新完了しました', 'ok');
-    } catch(ex) {
-      console.error(ex);
-      hideLdg();
-      showToast('⚠️ 通信エラーが発生しました', 'err');
-    }
-    
+async function saveAll() {{
+  // 編集モード
+  if(editMode && editOrig) {{
+    const staff=$$('mStaff').value, dept=$$('mDept').value;
+    const {{startDt, endDt, valid}} = getStartEnd();
+    if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
+    if(!valid){{alert('時間が不正です');return;}}
+    closeReg(); showLdg('更新中...');
+    const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
+    let ok=false;
+    try {{
+      // 旧データ削除 → 新データ追加
+      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
+        start:norm(editOrig.start),end:norm(editOrig.end)}}));
+      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
+        start:startDt,end:endDt}}));
+      ok=true;
+    }} catch(ex){{console.warn(ex);}}
+    // ローカル更新
+    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
+    if(idx>=0) {{
+      SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
+        start:startDt.replace(' ','T')+':00',
+        end:endDt.replace(' ','T')+':00'}};
+    }}
+    hideLdg();
+    showToast(ok?'✅ 更新しました':'⚠️ 画面更新済み（GAS側も確認してください）', ok?'ok':'wn');
     renderView();
     return;
-  }
+  }}
 
   // 通常登録
   let items=[];
@@ -1114,84 +1081,66 @@ async function saveAll() {
 // ══════════════════════════════════════
 // 詳細 / 削除 / 編集
 // ══════════════════════════════════════
-function showDet(s) {
-  if (!s) return; // 安全策
-  curS = { ...s }; // 参照ではなくコピーを保持
-  curI = SHIFTS.indexOf(s);
-  
-  const st = pd_(s.start), et = pd_(s.end), col = deptClr(s.dept);
-  $$('detBody').innerHTML = `
-    <span class="dchip" style="background:${rgba(col,.25)};color:${col}">${s.dept}</span>
-    <div class="dr"><span class="di">👤</span><span>${s.staff}</span></div>
-    <div class="dr"><span class="di">📅</span><span>${fmt(st)}</span></div>
-    <div class="dr"><span class="di">🕐</span><span>${p2(st.getHours())}:${p2(st.getMinutes())} → ${p2(et.getHours())}:${p2(et.getMinutes())}</span></div>
-    <div class="dr"><span class="di">⏱️</span><span>${Math.round((et-st)/60000)}分</span></div>`;
-  $$('detOv').style.display = 'flex';
-}
+function showDet(s) {{
+  curS=s; curI=SHIFTS.indexOf(s);
+  const st=pd_(s.start), et=pd_(s.end), col=deptClr(s.dept);
+  $$('detBody').innerHTML=`
+    <span class="dchip" style="background:${{rgba(col,.25)}};color:${{col}}">${{s.dept}}</span>
+    <div class="dr"><span class="di">👤</span><span>${{s.staff}}</span></div>
+    <div class="dr"><span class="di">📅</span><span>${{fmt(st)}}</span></div>
+    <div class="dr"><span class="di">🕐</span><span>${{p2(st.getHours())}}:${{p2(st.getMinutes())}} → ${{p2(et.getHours())}}:${{p2(et.getMinutes())}}</span></div>
+    <div class="dr"><span class="di">⏱️</span><span>${{Math.round((et-st)/60000)}}分</span></div>`;
+  $$('detOv').style.display='flex';
+}}
+function closeDet() {{ $$('detOv').style.display='none'; curS=null; }}
 
-function closeDet() { 
-  $$('detOv').style.display = 'none'; 
-  // ここで curS = null にすると編集ボタンが動かなくなるため、あえて消さないか、
-  // あるいは編集モードに入る直前まで保持するようにします。
-}
+function editShift() {{
+  if(!curS) return;
+  editMode=true; editOrig={{...curS}};
+  const st=pd_(curS.start), et=pd_(curS.end);
+  closeDet();
 
-function editShift() {
-  // エラー対策: curS がない場合は何もしない
-  if (!curS) {
-    console.error("編集対象（curS）が見つかりません");
-    return;
-  }
-
-  editMode = true; 
-  editOrig = { ...curS }; // 元データをバックアップ
-  
-  const st = pd_(curS.start);
-  const et = pd_(curS.end);
-  
-  // 詳細モーダルを閉じる
-  $$('detOv').style.display = 'none';
-
-  // 登録モーダルの表示更新
   $$('regTitle').textContent = 'シフト編集';
-  $$('addBatchBtn').style.display = 'none';
-  $$('regHint').style.display = 'none';
+  $$('addBatchBtn').style.display='none';
+  $$('regHint').style.display='none';
 
-  // 値のセット
   $$('mDate').value = fmt(st);
   $$('mSH').value = st.getHours();
   $$('mSM').value = st.getMinutes();
-  
-  // 終了時間の計算（翌日跨ぎ対応）
-  const diffMs = et - st;
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (et.getDate() !== st.getDate() || diffDays > 0) {
-    $$('mEH').value = et.getHours() + 24;
-  } else {
+  // 終了が翌日なら36時間表記に
+  const diffDays = Math.floor((et - st) / 86400000);
+  if(diffDays>=1) {{
+    $$('mEH').value = et.getHours()+24;
+  }} else {{
     $$('mEH').value = et.getHours();
-  }
+  }}
   $$('mEM').value = et.getMinutes();
-  
   updateNextDayLabel();
 
-  // セレクトボックスの選択
-  const sel1 = $$('mStaff');
-  for (let i = 0; i < sel1.options.length; i++) {
-    if (sel1.options[i].value === curS.staff) {
-      sel1.selectedIndex = i;
-      break;
-    }
-  }
-  
-  const sel2 = $$('mDept');
-  for (let i = 0; i < sel2.options.length; i++) {
-    if (sel2.options[i].value === curS.dept) {
-      sel2.selectedIndex = i;
-      break;
-    }
-  }
+  const sel1=$$('mStaff'); for(const o of sel1.options) if(o.value===curS.staff){{sel1.value=curS.staff;break;}}
+  const sel2=$$('mDept');  for(const o of sel2.options) if(o.value===curS.dept) {{sel2.value=curS.dept; break;}}
 
-  $$('regOv').style.display = 'flex';
-}
+  renderBatchUI();
+  $$('regOv').style.display='flex';
+}}
+
+async function delShift() {{
+  if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`)) return;
+  const s=curS; closeDet(); showLdg('削除中...');
+  const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
+  let ok=false;
+  try {{
+    const r=await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,
+      start:norm(s.start),end:norm(s.end)}}));
+    const t=await r.text();
+    ok=r.ok&&(t.includes('delet')||t.includes('ok')||t.trim().length===0);
+  }} catch(ex){{console.warn(ex);}}
+  const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
+  if(i>=0) SHIFTS.splice(i,1);
+  hideLdg();
+  showToast(ok?'🗑️ 削除しました':'🗑️ 画面から削除（GAS側も確認してください）', ok?'ok':'wn');
+  renderView();
+}}
 
 // ══════════════════════════════════════
 // ヘルパー
