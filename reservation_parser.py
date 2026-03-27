@@ -68,18 +68,49 @@ def extract_ci_co(row) -> tuple:
     ci_raw = row.get("C/I", None)
     co_raw = row.get("C/O", None)
 
-    def try_parse(v):
-        if pd.isna(v) or v == "#######":
-            return None
-        if isinstance(v, datetime):
-            return v.date()
-        if isinstance(v, str):
-            for fmt in ("%Y/%m/%d", "%Y-%m-%d", "%m/%d/%Y", "%Y年%m月%d日"):
-                try:
-                    return datetime.strptime(v.strip(), fmt).date()
-                except ValueError:
-                    pass
+def try_parse(v):
+    if pd.isna(v) or v == "#######":
         return None
+
+    # ① datetime型
+    if isinstance(v, datetime):
+        return v.date()
+
+    # ② 数値（Excel日付）
+    if isinstance(v, (int, float)):
+        try:
+            return (datetime(1899, 12, 30) + timedelta(days=float(v))).date()
+        except:
+            return None
+
+    # ③ 文字列
+    if isinstance(v, str):
+        s = v.strip()
+
+        # 全角→半角
+        s = s.translate(str.maketrans(
+            "０１２３４５６７８９／－",
+            "0123456789/-"
+        ))
+
+        # 時刻削除
+        s = re.sub(r"\s+\d{1,2}:\d{2}(:\d{2})?", "", s)
+
+        # 余計な文字削除（曜日など）
+        s = re.sub(r"[（(].*?[）)]", "", s)
+
+        # 日付抽出
+        m = re.search(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}", s)
+        if m:
+            try:
+                return datetime.strptime(m.group(), "%Y/%m/%d").date()
+            except:
+                try:
+                    return datetime.strptime(m.group(), "%Y-%m-%d").date()
+                except:
+                    pass
+
+    return None
 
     ci = try_parse(ci_raw)
     co = try_parse(co_raw)
