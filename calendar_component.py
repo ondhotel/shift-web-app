@@ -158,11 +158,11 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .dshdr{{display:flex;border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;}}
 .dcrn{{width:58px;min-width:58px;flex-shrink:0;padding:7px 4px;font-size:10px;color:var(--tx2);text-align:center;border-right:1px solid var(--bd);}}
 .dsch{{flex:1;min-width:88px;padding:6px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-.dbody{{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
-.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);}}
+.dbody{{flex:1;display:flex;overflow:auto;min-height:0;position:relative;}}
+.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);position:sticky;left:0;z-index:2;}}
 .dts{{height:48px;padding:3px 6px 0;border-bottom:1px solid var(--bd);font-size:10px;color:var(--tx2);font-family:var(--mn);text-align:right;}}
 .dts.mid{{border-top:2px solid var(--ac2);color:var(--ac2);font-weight:700;}}
-.dscs{{flex:1;display:flex;overflow-x:auto;}}
+.dscs{{flex:1;display:flex;}}
 .dscol{{flex:1;min-width:88px;border-right:1px solid var(--bd);position:relative;cursor:crosshair;}}
 .dhs{{height:48px;border-bottom:1px solid var(--bd);}}
 .nzone{{position:absolute;left:0;right:0;background:var(--nday);border-top:1px dashed var(--ac2);pointer-events:none;z-index:0;}}
@@ -1026,19 +1026,20 @@ async function saveAll() {{
     const {{startDt, endDt, valid}} = getStartEnd();
     if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
     if(!valid){{alert('時間が不正です');return;}}
+    const savedOrig={{...editOrig}};  // closeReg前に保存(closeRegでeditOrig=nullになるため)
     closeReg(); showLdg('更新中...');
     const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
     let ok=false;
     try {{
       // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
-        start:norm(editOrig.start),end:norm(editOrig.end)}}));
+      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:savedOrig.staff,dept:savedOrig.dept,
+        start:norm(savedOrig.start),end:norm(savedOrig.end)}}));
       await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
         start:startDt,end:endDt}}));
       ok=true;
     }} catch(ex){{console.warn(ex);}}
     // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
+    const idx=SHIFTS.findIndex(x=>x.staff===savedOrig.staff&&x.dept===savedOrig.dept&&x.start===savedOrig.start);
     if(idx>=0) {{
       SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
         start:startDt.replace(' ','T')+':00',
