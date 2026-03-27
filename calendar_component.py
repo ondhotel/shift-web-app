@@ -50,7 +50,9 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 
 /* ── レイアウト ── */
 #app{{display:flex;flex-direction:column;height:{H}px;}}
+/* topbarはauto高さ → bannerが表示されても潰れない */
 #topbar{{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sf);border-bottom:1px solid var(--bd);flex-wrap:wrap;}}
+/* ペーストバナーはtopbarの2行目として折り返す */
 #pbanner{{display:none;width:100%;align-items:center;gap:8px;padding:4px 0 2px;flex-wrap:wrap;}}
 #pbanner.show{{display:flex;}}
 .pbl{{font-size:11px;color:var(--cp);font-weight:700;}}
@@ -87,6 +89,7 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .mc:hover{{background:var(--hv);}}
 .mc.other{{opacity:.3;}}.mc.tod{{background:var(--tod);}}
 .mc.sun .dn{{color:#f87171;}}.mc.sat .dn{{color:#60a5fa;}}
+/* ペーストモード選択済み */
 .mc.psel{{background:var(--sel)!important;outline:2px solid var(--cp);outline-offset:-2px;}}
 .mc.pmode{{cursor:copy;}}
 .mc.pmode:hover:not(.psel){{background:rgba(240,160,91,.1)!important;}}
@@ -98,15 +101,16 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .m-total {{ background:var(--ac); color:#000; font-weight:800; font-size:10px; padding:1px 4px; display:flex; justify-content:space-between; }}
 .m-depts {{ font-size:9px; padding:1px 4px; color:var(--tx2); line-height:1.2; }}
 
-/* シフトチップ */
+/* シフトチップ (以前のスタイルも念のため維持) */
 .chip{{font-size:10px;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;}}
 .chip.copied{{outline:2px solid var(--cp);}}
+/* マージチップ */
 .mmerge{{border-radius:3px;margin-bottom:2px;overflow:hidden;cursor:pointer;font-size:10px;font-weight:500;}}
 .mseg{{padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
 .mmore{{font-size:10px;color:var(--tx2);cursor:pointer;padding:1px 3px;}}
 .mmore:hover{{color:var(--ac);}}
 
-/* ── 週ビュー（時間軸） ── */
+/* ── 週ビュー ── */
 .wv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
 .whdr{{display:grid;grid-template-columns:50px repeat(7,1fr);border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;}}
 .wcrn{{padding:8px 0;}}
@@ -130,28 +134,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .wdcol.pmode:hover{{background:rgba(240,160,91,.08)!important;}}
 .wdcol.psel{{background:var(--sel)!important;}}
 .whs{{height:48px;border-bottom:1px solid var(--bd);}}
-
-/* ── スタッフ週ビュー ── */
-.swv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
-.swhdr{{display:grid;border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;}}
-.swcrn{{padding:8px 6px;font-size:10px;color:var(--tx2);font-weight:600;text-align:center;border-right:1px solid var(--bd);}}
-.swhd{{padding:5px 3px;text-align:center;border-right:1px solid var(--bd);}}
-.swhd.tod .swdn{{color:var(--ac);}}
-.swhd.sun .swdow,.swhd.sun .swdn{{color:#f87171;}}
-.swhd.sat .swdow,.swhd.sat .swdn{{color:#60a5fa;}}
-.swdow{{font-size:9px;font-weight:600;color:var(--tx2);letter-spacing:.05em;}}
-.swdn{{font-size:15px;font-weight:700;font-family:var(--mn);}}
-.swgrid{{flex:1;overflow-y:auto;display:flex;flex-direction:column;}}
-.swrow{{display:grid;border-bottom:1px solid var(--bd);min-height:48px;}}
-.swstaff{{padding:6px 6px;font-size:11px;font-weight:600;display:flex;align-items:flex-start;border-right:1px solid var(--bd);background:var(--sf);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
-.swcell{{border-right:1px solid var(--bd);padding:3px;cursor:pointer;transition:background .1s;min-height:48px;overflow:hidden;}}
-.swcell:hover{{background:var(--hv);}}
-.swcell.tod{{background:var(--tod);}}
-.swcell.pmode{{cursor:copy;}}
-.swcell.pmode:hover:not(.psel){{background:rgba(240,160,91,.1)!important;}}
-.swcell.psel{{background:var(--sel)!important;outline:2px solid var(--cp);outline-offset:-2px;}}
-.swchip{{font-size:10px;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;display:block;}}
-.swchip:hover{{filter:brightness(1.2);}}
 
 /* ── 日ビュー ── */
 .dv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
@@ -186,7 +168,7 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .fl{{display:block;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}}
 .fi,.fs2{{width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-size:13px;font-family:var(--fn);transition:border-color .15s;}}
 .fi:focus,.fs2:focus{{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(91,138,240,.15);}}
-.tr{{display:grid;grid-template-columns:1fr 18px 1fr 90px;align-items:center;gap:5px;}}
+.tr{{display:grid;grid-template-columns:1fr 18px 1fr;align-items:center;gap:5px;}}
 .tsep{{color:var(--tx2);text-align:center;}}
 .ma{{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap;}}
 .btn{{flex:1;padding:8px;border-radius:6px;border:none;font-size:13px;font-family:var(--fn);font-weight:600;cursor:pointer;transition:all .15s;min-width:72px;}}
@@ -195,7 +177,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .bd{{background:var(--ng);color:#fff;flex:0;padding:8px 13px;}}.bd:hover{{background:#ef4444;}}
 .bc{{background:rgba(240,160,91,.2);color:var(--cp);border:1px solid var(--cp);flex:0;padding:8px 13px;}}.bc:hover{{background:var(--cp);color:#000;}}
 .badd{{background:var(--ok);color:#fff;flex:0;padding:8px 13px;white-space:nowrap;}}.badd:hover{{background:#22c37e;}}
-.bedit{{background:rgba(91,138,240,.2);color:var(--ac);border:1px solid var(--ac);flex:0;padding:8px 13px;}}.bedit:hover{{background:var(--ac);color:#fff;}}
 .blist{{max-height:140px;overflow-y:auto;margin-bottom:7px;}}
 .bi{{display:flex;align-items:center;justify-content:space-between;padding:5px 7px;background:var(--sf2);border-radius:5px;margin-bottom:3px;font-size:11px;border:1px solid var(--bd);}}
 .bilbl{{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
@@ -211,8 +192,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .ldg{{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9998;gap:10px;font-size:13px;color:var(--tx);}}
 .spin{{width:17px;height:17px;border:2px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:sp .7s linear infinite;}}
 @keyframes sp{{to{{transform:rotate(360deg);}}}}
-/* 36時間表記ヒント */
-.time-hint{{font-size:10px;color:var(--tx2);margin-top:3px;}}
 </style>
 </head>
 <body>
@@ -222,7 +201,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
     <div class="vtab">
       <button class="vt on" data-v="day">日</button>
       <button class="vt"    data-v="week">週</button>
-      <button class="vt"    data-v="staffweek">週/人</button>
       <button class="vt"    data-v="month">月</button>
     </div>
     <div class="navg">
@@ -248,49 +226,39 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   <div id="cal"></div>
 </div>
 
-<!-- 登録 / 編集モーダル -->
 <div class="ov" id="regOv" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
-    <div class="mt">📋 <span id="regTitle">シフト登録</span> <span id="regLbl" style="font-size:11px;color:var(--tx2);font-weight:400;"></span></div>
+    <div class="mt">📋 シフト登録 <span id="regLbl" style="font-size:11px;color:var(--tx2);font-weight:400;"></span></div>
     <div class="fg"><label class="fl">従業員</label><select class="fs2" id="mStaff"></select></div>
     <div class="fg"><label class="fl">部門</label><select class="fs2" id="mDept"></select></div>
     <div class="fg"><label class="fl">日付</label><input type="date" class="fi" id="mDate"></div>
     <div class="fg">
-      <label class="fl">時間 <span style="font-weight:400;font-size:9px;color:var(--tx2);">（日跨ぎ: 終了を25〜36時で入力）</span></label>
+      <label class="fl">時間</label>
       <div class="tr">
-        <input type="number" class="fi" id="mSH" min="0" max="23" placeholder="開始h" style="text-align:center;">
-        <div class="tsep" style="font-size:9px;">:</div>
-        <input type="number" class="fi" id="mSM" min="0" max="59" placeholder="分" style="text-align:center;">
-        <div></div>
-      </div>
-      <div class="tr" style="margin-top:5px;">
-        <input type="number" class="fi" id="mEH" min="0" max="36" placeholder="終了h" style="text-align:center;">
-        <div class="tsep" style="font-size:9px;">:</div>
-        <input type="number" class="fi" id="mEM" min="0" max="59" placeholder="分" style="text-align:center;">
-        <div style="font-size:10px;color:var(--ac2);padding-left:4px;" id="nextDayLbl"></div>
+        <input type="time" class="fi" id="mS" value="09:00">
+        <div class="tsep">→</div>
+        <input type="time" class="fi" id="mE" value="18:00">
       </div>
     </div>
     <div id="batchSec" style="display:none">
       <div class="dcl" id="batchCnt"></div>
       <div class="blist" id="batchList"></div>
     </div>
-    <div class="ma" id="regBtns">
+    <div class="ma">
       <button class="btn bs" onclick="closeReg()">閉じる</button>
-      <button class="btn badd" id="addBatchBtn" onclick="addBatch()">＋ リストに追加</button>
+      <button class="btn badd" onclick="addBatch()">＋ リストに追加</button>
       <button class="btn bp"  onclick="saveAll()">保存</button>
     </div>
-    <div style="font-size:10px;color:var(--tx2);margin-top:7px;" id="regHint">💡「リストに追加」で複数件まとめて登録できます。</div>
+    <div style="font-size:10px;color:var(--tx2);margin-top:7px;">💡「リストに追加」で複数件まとめて登録できます。</div>
   </div>
 </div>
 
-<!-- 詳細モーダル -->
 <div class="ov" id="detOv" style="display:none" onclick="if(event.target===this)closeDet()">
   <div class="modal">
     <div class="mt">📌 シフト詳細</div>
     <div id="detBody"></div>
     <div class="ma" style="margin-top:12px">
       <button class="btn bs" onclick="closeDet()">閉じる</button>
-      <button class="btn bedit" onclick="editShift()">✏️ 編集</button>
       <button class="btn bc" onclick="startCopy()">📋 コピー</button>
       <button class="btn bd" onclick="delShift()">削除</button>
     </div>
@@ -325,7 +293,7 @@ const MONS  = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','1
 const HPX   = 48;   // 1時間の高さ(px)
 const DAY_H = 30;   // 日ビュー: 0〜翌6時 = 30時間
 const MID_H = 24;   // 深夜境界
-const MERGE_GAP = 5;
+const MERGE_GAP = 5; // 月ビューでマージする間隔(分)
 
 // ══════════════════════════════════════
 // 状態
@@ -333,12 +301,10 @@ const MERGE_GAP = 5;
 let view = 'day';
 let cur  = new Date(); cur.setHours(0,0,0,0);
 let batch = [];
-let clip  = null;
-let pasteDates = new Set();
+let clip  = null;   // コピーされたシフト
+let pasteDates = new Set(); // ペースト対象日セット (string "YYYY-MM-DD")
 let curS = null, curI = -1;
 let dragSt = null;
-let editMode = false;   // 編集モードフラグ
-let editOrig = null;    // 編集対象の元データ
 
 // ══════════════════════════════════════
 // 初期化
@@ -349,6 +315,7 @@ window.addEventListener('load', () => {{
   ['fstaff','mStaff'].forEach(id => STAFF.forEach(s => $$(id).appendChild(new Option(s,s))));
   ['fdept', 'mDept' ].forEach(id => DEPTS.forEach(d => $$(id).appendChild(new Option(d,d))));
 
+  // ビュー切り替えボタン（イベント委任）
   document.querySelector('.vtab').addEventListener('click', e => {{
     const v = e.target.dataset.v;
     if (v) setView(v);
@@ -361,18 +328,12 @@ window.addEventListener('load', () => {{
   $$('pcancel').onclick = cancelCopy;
   $$('pexec').onclick   = execPaste;
 
-  // 終了時間が24以上なら「翌日」ラベル表示
-  $$('mEH').addEventListener('input', updateNextDayLabel);
-
+  // ★ カレンダー本体のクリックはイベント委任で処理
+  //   → renderView()後もハンドラが消えない
   $$('cal').addEventListener('click', onCalClick);
 
   renderView();
 }});
-
-function updateNextDayLabel() {{
-  const eh = parseInt($$('mEH').value)||0;
-  $$('nextDayLbl').textContent = eh >= 24 ? `翌${{eh-24}}時` : '';
-}}
 
 // ══════════════════════════════════════
 // ユーティリティ
@@ -382,6 +343,7 @@ const fmt = d => `${{d.getFullYear()}}-${{p2(d.getMonth()+1)}}-${{p2(d.getDate()
 const p2  = n => String(n).padStart(2,'0');
 const tod = () => fmt(new Date());
 const pd_ = s => new Date(s);
+const m2t = m => {{ const mm=m%1440; return `${{p2(Math.floor(mm/60))}}:${{p2(mm%60)}}`; }};
 const shOn = (ds,arr) => arr.filter(s => s.start && fmt(pd_(s.start)) === ds);
 const getFil = () => {{
   const fs = $$('fstaff').value||'', fd = $$('fdept').value||'';
@@ -389,12 +351,6 @@ const getFil = () => {{
 }};
 const sMins = s => {{ const d=pd_(s.start); return d.getHours()*60+d.getMinutes(); }};
 const eMins = s => {{ const d=pd_(s.end);   return d.getHours()*60+d.getMinutes()||1440; }};
-
-// 開始分から "HH:MM" を返す（36時間対応）
-function m2t(m) {{
-  const mm = ((m % 1440) + 1440) % 1440;
-  return `${{p2(Math.floor(mm/60))}}:${{p2(mm%60)}}`;
-}}
 
 // ══════════════════════════════════════
 // ビュー制御
@@ -405,56 +361,48 @@ function setView(v) {{
   renderView();
 }}
 function nav(d) {{
-  if (view==='day')                    cur.setDate(cur.getDate()+d);
-  else if (view==='week'||view==='staffweek') cur.setDate(cur.getDate()+d*7);
-  else                                 cur.setMonth(cur.getMonth()+d);
+  if (view==='day')       cur.setDate(cur.getDate()+d);
+  else if (view==='week') cur.setDate(cur.getDate()+d*7);
+  else                    cur.setMonth(cur.getMonth()+d);
   renderView();
 }}
 function goToday() {{ cur=new Date(); cur.setHours(0,0,0,0); renderView(); }}
 function renderView() {{
-  if (view==='day')            renderDay();
-  else if (view==='week')      renderWeek();
-  else if (view==='staffweek') renderStaffWeek();
-  else                         renderMonth();
+  if (view==='day')        renderDay();
+  else if (view==='week')  renderWeek();
+  else                     renderMonth();
   updateBanner();
 }}
 
 // ══════════════════════════════════════
-// イベント委任: カレンダー全体のクリック
+// ★ イベント委任: カレンダー全体のクリック
 // ══════════════════════════════════════
 function onCalClick(e) {{
+  // シフトブロッククリック → 詳細 (sb自身またはその子)
   const sbEl = e.target.closest('.sb');
   if (sbEl) {{
     const idx = parseInt(sbEl.dataset.idx, 10);
     if (!isNaN(idx)) {{ showDet(SHIFTS[idx]); return; }}
   }}
 
-  // 月チップ / スタッフ週チップ クリック
-  const chipEl = e.target.closest('.chip,.mseg,.swchip');
+  // 月チップクリック → 詳細
+  const chipEl = e.target.closest('.chip,.mseg');
   if (chipEl) {{
     const idx = parseInt(chipEl.dataset.idx, 10);
-    if (!isNaN(idx)) {{
-      if (clip) {{
-        // ペーストモード中は日付セル選択
-        const dateEl = chipEl.closest('[data-date]');
-        if (dateEl) togglePasteDate(dateEl.dataset.date);
-      }} else {{
-        showDet(SHIFTS[idx]);
-      }}
-      return;
-    }}
+    if (!isNaN(idx)) {{ showDet(SHIFTS[idx]); return; }}
   }}
 
-  // ペーストモード中: data-dateを持つ要素をクリック
+  // ペーストモード中: data-dateを持つ要素（セル・列ヘッダ）をクリック
   if (clip) {{
     const dateEl = e.target.closest('[data-date]');
     if (dateEl) {{
-      togglePasteDate(dateEl.dataset.date);
+      const ds = dateEl.dataset.date;
+      togglePasteDate(ds);
       return;
     }}
   }}
 
-  // 通常クリック: data-openreg
+  // 通常クリック: data-openreg（日付セルや列）
   const regEl = e.target.closest('[data-openreg]');
   if (regEl && !clip) {{
     const ds = regEl.dataset.openreg;
@@ -463,7 +411,7 @@ function onCalClick(e) {{
     return;
   }}
 
-  // 週ヘッダ日付クリック → 日ビューへ
+  // 週ヘッダ日付クリック（ペーストモードでない時） → 日ビューへ
   const whdEl = e.target.closest('.whd[data-date]');
   if (whdEl && !clip) {{
     cur = new Date(whdEl.dataset.date + 'T00:00:00');
@@ -492,6 +440,7 @@ function togglePasteDate(ds) {{
   if (pasteDates.has(ds)) pasteDates.delete(ds);
   else                    pasteDates.add(ds);
   updateBanner();
+  // 選択状態だけ反映（全再描画は重いので選択CSSだけ切り替え）
   document.querySelectorAll(`[data-date]`).forEach(el => {{
     el.classList.toggle('psel', pasteDates.has(el.dataset.date));
   }});
@@ -565,11 +514,14 @@ function renderMonth() {{
       if (clip) cls += ' pmode';
       if (isPsel) cls += ' psel';
       const mc = mk('div', cls);
+      // ★ data-date: ペーストモードで使用
+      // ★ data-openreg: 通常クリックで登録モーダル
       mc.dataset.date = ds;
       if (!clip) mc.dataset.openreg = ds;
 
       const dn=mk('div','dn'); dn.textContent=cell.d; mc.appendChild(dn);
 
+      // シフト表示（集計ガッチャンコ版）
       const dayS = shOn(ds, fil);
       const summary = {{}};
       dayS.forEach(s => {{
@@ -590,20 +542,18 @@ function renderMonth() {{
         const groupDiv = mk('div','mmerge' + (isCopied?' copied':''));
         const col = deptClr(info.raw[0].dept);
         groupDiv.style.cssText = `border-left:3px solid ${{col}}; background:${{rgba(col,.12)}}; color:${{col}};`;
-        groupDiv.dataset.date = ds;
-
+        
         const hdr = mk('div','mseg');
         hdr.style.cssText = `background:${{rgba(col,.3)}}; font-weight:700;`;
         hdr.innerHTML = `<span>${{staff}}</span> <span style="float:right; font-size:9px;">${{timeStr}}</span>`;
-        hdr.dataset.idx = SHIFTS.indexOf(info.raw[0]);
         groupDiv.appendChild(hdr);
 
         const dlst = mk('div','mseg');
         dlst.style.cssText = `font-size:9px; color:var(--tx2);`;
         dlst.textContent = info.depts.join(' / ');
-        dlst.dataset.idx = SHIFTS.indexOf(info.raw[0]);
         groupDiv.appendChild(dlst);
-
+        
+        // 詳細を開くために生データを保持（代表として1件目のインデックス）
         groupDiv.dataset.idx = SHIFTS.indexOf(info.raw[0]);
         mc.appendChild(groupDiv);
       }}
@@ -616,95 +566,10 @@ function renderMonth() {{
 }}
 
 // ══════════════════════════════════════
-// スタッフ週ビュー（新規）
+// 週ビュー（重複シフトを横並び）
 // ══════════════════════════════════════
 function wkStart(d) {{ const r=new Date(d); r.setDate(r.getDate()-r.getDay()); return r; }}
 
-function renderStaffWeek() {{
-  const ws=wkStart(cur), we=new Date(ws); we.setDate(we.getDate()+6);
-  const [y1,m1,d1]=[ws.getFullYear(),ws.getMonth()+1,ws.getDate()];
-  const [y2,m2,d2]=[we.getFullYear(),we.getMonth()+1,we.getDate()];
-  $$('plbl').textContent = y1===y2
-    ? `${{y1}}年${{m1}}/${{d1}}-${{m2}}/${{d2}}`
-    : `${{y1}}/${{m1}}/${{d1}}-${{y2}}/${{m2}}/${{d2}}`;
-
-  const td=tod(), fil=getFil();
-  const fsv = $$('fstaff').value||'';
-  const staffList = fsv ? [fsv] : STAFF;
-
-  const root=$$('cal'); root.innerHTML='';
-  const swv=mk('div','swv');
-
-  // 列数 = 1(スタッフ名列) + 7(曜日)
-  const cols = 7;
-  const STAFF_COL_W = 80; // px
-
-  // ヘッダー
-  const swhdr=mk('div','swhdr');
-  swhdr.style.gridTemplateColumns = `${{STAFF_COL_W}}px repeat(${{cols}},1fr)`;
-  const crn=mk('div','swcrn'); crn.textContent='スタッフ'; swhdr.appendChild(crn);
-
-  const weekDates = [];
-  for(let i=0;i<7;i++) {{
-    const d=new Date(ws); d.setDate(d.getDate()+i);
-    weekDates.push(d);
-    const ds=fmt(d), dow=d.getDay();
-    const isPsel=pasteDates.has(ds);
-    let cls=`swhd${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{clip?' pmode':''}}${{isPsel?' psel':''}}`;
-    const hd=mk('div',cls);
-    hd.dataset.date=ds;
-    hd.innerHTML=`<div class="swdow">${{DAYS[dow]}}</div><div class="swdn">${{d.getDate()}}</div>`;
-    swhdr.appendChild(hd);
-  }}
-  swv.appendChild(swhdr);
-
-  // グリッド本体
-  const swgrid=mk('div','swgrid');
-
-  staffList.forEach(staff => {{
-    const row=mk('div','swrow');
-    row.style.gridTemplateColumns = `${{STAFF_COL_W}}px repeat(${{cols}},1fr)`;
-
-    // スタッフ名列
-    const nameCell=mk('div','swstaff'); nameCell.textContent=staff; row.appendChild(nameCell);
-
-    // 各曜日セル
-    weekDates.forEach(d => {{
-      const ds=fmt(d), dow=d.getDay();
-      const isPsel=pasteDates.has(ds);
-      let cls=`swcell${{ds===td?' tod':''}}${{clip?' pmode':''}}${{isPsel?' psel':''}}`;
-      const cell=mk('div',cls);
-      cell.dataset.date=ds;
-      if(!clip) cell.dataset.openreg=ds;
-      cell.dataset.staff=staff;
-
-      // シフト表示（月表示と同じ最小情報）
-      const dayS = shOn(ds, fil).filter(s => s.staff===staff);
-      dayS.forEach(s => {{
-        const st=pd_(s.start), et=pd_(s.end);
-        const timeStr = p2(st.getHours())+':'+p2(st.getMinutes())+'-'+p2(et.getHours())+':'+p2(et.getMinutes());
-        const col=deptClr(s.dept);
-        const isCopied=clip&&s.staff===clip.staff&&s.start===clip.start;
-        const chip=mk('span','swchip'+(isCopied?' copied':''));
-        chip.style.cssText=`background:${{rgba(col,.25)}};border-left:3px solid ${{col}};color:${{col}};`;
-        chip.textContent=`${{s.dept}} ${{timeStr}}`;
-        chip.dataset.idx=SHIFTS.indexOf(s);
-        cell.appendChild(chip);
-      }});
-
-      row.appendChild(cell);
-    }});
-
-    swgrid.appendChild(row);
-  }});
-
-  swv.appendChild(swgrid);
-  root.appendChild(swv);
-}}
-
-// ══════════════════════════════════════
-// 週ビュー（時間軸）
-// ══════════════════════════════════════
 function calcLanes(shifts) {{
   const sorted = [...shifts].sort((a,b)=>a.sm-b.sm);
   const lanes = [];
@@ -712,6 +577,7 @@ function calcLanes(shifts) {{
     let lane=-1;
     for(let i=0;i<lanes.length;i++) {{ if(lanes[i]<=s.sm){{lane=i;lanes[i]=s.em;break;}} }}
     if(lane===-1) {{ lane=lanes.length; lanes.push(s.em); }}
+    // laneとtotalをセット（mkBlockで使用）
     s.lane=lane;
   }});
   sorted.forEach(s=>s.total=lanes.length);
@@ -736,7 +602,7 @@ function renderWeek() {{
     const isPsel=pasteDates.has(ds);
     let cls=`whd${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{clip?' pmode':''}}${{isPsel?' psel':''}}`;
     const hd=mk('div',cls);
-    hd.dataset.date=ds;
+    hd.dataset.date=ds;   // ← ペーストモード & 日ビュー移動で共用
     hd.innerHTML=`<div class="wdow">${{DAYS[dow]}}</div><div class="wdn">${{d.getDate()}}</div>`;
     whdr.appendChild(hd);
   }}
@@ -754,13 +620,15 @@ function renderWeek() {{
     const isPsel=pasteDates.has(ds);
     let cls=`wdcol${{ds===td?' tod':''}}${{clip?' pmode':''}}${{isPsel?' psel':''}}`;
     const col=mk('div',cls);
-    col.dataset.date=ds;
-    if(!clip) col.dataset.openreg=ds;
+    col.dataset.date=ds;  // ← ペーストモードで使用
+    if(!clip) col.dataset.openreg=ds; // 通常ドラッグ用
     for(let h=0;h<24;h++) col.appendChild(mk('div','whs'));
 
+    // シフトブロック（横並びレイアウト）
     const dayS=shOn(ds,fil).map(s=>{{return{{...s,sm:sMins(s),em:eMins(s)}}}});
     calcLanes(dayS).forEach(s=>col.appendChild(mkBlock(s,true,0,s.lane,s.total)));
 
+    // ドラッグ登録（ペーストモード中は無効）
     if(!clip) setupDragWeek(col, ds);
     wdc.appendChild(col);
   }}
@@ -830,7 +698,7 @@ function renderDay() {{
 }}
 
 // ══════════════════════════════════════
-// シフトブロック生成
+// シフトブロック生成 (修正版)
 // ══════════════════════════════════════
 function mkBlock(s, showStaff, offsetMins, lane, total) {{
   const st=pd_(s.start), et=pd_(s.end);
@@ -842,20 +710,19 @@ function mkBlock(s, showStaff, offsetMins, lane, total) {{
   const b=mk('div','sb'+(isCopied?' copied':''));
   const W=100/total, L=lane*W;
   b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};left:${{L+0.4}}%;width:${{W-0.8}}%;`;
-
+  
+  // クリックした時にこのシフトデータ(s)を保持するように修正
   b.onclick = (e) => {{
     e.stopPropagation();
     if (clip) {{
       togglePasteDate(fmt(pd_(s.start)));
     }} else {{
-      showDet(s);
+      showDet(s); // 詳細モーダルを開く
     }}
   }};
 
   const nm=mk('div','sbn'); nm.textContent=showStaff?s.staff:s.dept; b.appendChild(nm);
   if(ht>26) {{ const tm=mk('div','sbt'); tm.textContent=`${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`; b.appendChild(tm); }}
-  // dataset.idxをセット（イベント委任用）
-  b.dataset.idx = SHIFTS.indexOf(s);
   return b;
 }}
 
@@ -870,29 +737,24 @@ function setupDragWeek(col, dateStr) {{
   col.addEventListener('mousedown', e => {{
     if(e.button||e.target.classList.contains('sb')) return;
     e.preventDefault();
-    const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.wbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
-    const sm=Math.max(0,snap(y2m(relY)));
+    const relY=e.clientY-col.getBoundingClientRect().top+(col.closest('.wbody')?.scrollTop||0);
+    const sm=snap(y2m(relY));
     el=mk('div','dragsel'); el.style.top=sm/60*HPX+'px'; el.style.height='0'; col.appendChild(el);
-    dragSt={{col,date:dateStr,sm,em:sm,el}};
+    dragSt={{col,date:dateStr,staff:null,sm,em:sm,el}};
   }});
   col.addEventListener('mousemove', e => {{
     if(!dragSt||dragSt.col!==col) return;
-    const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.wbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
-    const em=Math.max(0,snap(y2m(relY)));
-    dragSt.em=em;
+    const relY=e.clientY-col.getBoundingClientRect().top+(col.closest('.wbody')?.scrollTop||0);
+    const em=snap(y2m(relY));
     el.style.top=Math.min(dragSt.sm,em)/60*HPX+'px';
     el.style.height=Math.abs(em-dragSt.sm)/60*HPX+'px';
+    dragSt.em=em;
   }});
   col.addEventListener('mouseup', () => {{
     if(!dragSt||dragSt.col!==col) return;
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     el.remove(); const dt=dragSt.date; dragSt=null;
-    if(en-s<5)return; // 誤クリック防止
-    openReg(dt, null, null, '', '', s, en<s+15?s+60:en);
+    openReg(dt, m2t(s), m2t(en-s<15?s+60:en));
   }});
 }}
 
@@ -901,31 +763,25 @@ function setupDragDay(col, ds, dsN, staff) {{
   col.addEventListener('mousedown', e => {{
     if(e.button||e.target.classList.contains('sb')) return;
     e.preventDefault();
-    const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.dbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
-    const sm=Math.min(Math.max(0,snap(y2m(relY))), DAY_H*60);
+    const relY=e.clientY-col.getBoundingClientRect().top+(col.closest('.dbody')?.scrollTop||0);
+    const sm=Math.min(snap(y2m(relY)), DAY_H*60);
     el=mk('div','dragsel'); el.style.top=sm/60*HPX+'px'; el.style.height='0'; col.appendChild(el);
     dragSt={{col,ds,dsN,staff,sm,em:sm,el}};
   }});
   col.addEventListener('mousemove', e => {{
     if(!dragSt||dragSt.col!==col) return;
-    const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.dbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
-    const em=Math.min(Math.max(0,snap(y2m(relY))), DAY_H*60);
-    dragSt.em=em;
+    const relY=e.clientY-col.getBoundingClientRect().top+(col.closest('.dbody')?.scrollTop||0);
+    const em=Math.min(snap(y2m(relY)), DAY_H*60);
     el.style.top=Math.min(dragSt.sm,em)/60*HPX+'px';
     el.style.height=Math.abs(em-dragSt.sm)/60*HPX+'px';
+    dragSt.em=em;
   }});
   col.addEventListener('mouseup', () => {{
     if(!dragSt||dragSt.col!==col) return;
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     const isN=s>=1440, actualDs=isN?dragSt.dsN:dragSt.ds, stf=dragSt.staff;
     el.remove(); dragSt=null;
-    if(en-s<5)return; // 誤クリック防止
-    // sとenをそのまま渡す（DAY_H対応: sが1440以上なら翌日扱い）
-    openReg(actualDs, null, null, stf, '', s%1440, en<s+15?s+60:en);
+    openReg(actualDs, m2t(s), m2t(en-s<15?s+60:en), stf);
   }});
 }}
 document.addEventListener('mouseup', () => {{ if(dragSt?.el) dragSt.el.remove(); dragSt=null; }});
@@ -933,77 +789,25 @@ document.addEventListener('mouseup', () => {{ if(dragSt?.el) dragSt.el.remove();
 // ══════════════════════════════════════
 // 登録モーダル
 // ══════════════════════════════════════
-// smMins / emMins: 分単位（オプション。ドラッグ時に渡す）
-function openReg(ds, stStr, enStr, staff='', dept='', smMins=null, emMins=null) {{
-  editMode = false;
-  editOrig = null;
-  $$('regTitle').textContent = 'シフト登録';
-  $$('addBatchBtn').style.display = '';
-  $$('regHint').style.display = '';
-
-  $$('mDate').value = ds || fmt(cur);
-
-  if(smMins !== null) {{
-    // ドラッグ時: 分単位から時・分を設定（36時間対応）
-    $$('mSH').value = Math.floor(smMins / 60);
-    $$('mSM').value = smMins % 60;
-    // emMinsが1440以上なら翌日
-    const totalEH = Math.floor(emMins / 60);
-    $$('mEH').value = totalEH;
-    $$('mEM').value = emMins % 60;
-  }} else if(stStr) {{
-    // 文字列 "HH:MM" から設定
-    const [sh,sm2] = stStr.split(':').map(Number);
-    $$('mSH').value = sh; $$('mSM').value = sm2;
-    const [eh,em2] = (enStr||'18:00').split(':').map(Number);
-    $$('mEH').value = eh; $$('mEM').value = em2;
-  }} else {{
-    $$('mSH').value=9; $$('mSM').value=0;
-    $$('mEH').value=18; $$('mEM').value=0;
-  }}
-
-  updateNextDayLabel();
-
+function openReg(ds, st, en, staff='', dept='') {{
+  $$('mDate').value=ds||fmt(cur);
+  $$('mS').value=st||'09:00';
+  $$('mE').value=en||'18:00';
   if(staff) {{ const sel=$$('mStaff'); for(const o of sel.options) if(o.value===staff){{sel.value=staff;break;}} }}
   if(dept)  {{ const sel=$$('mDept');  for(const o of sel.options) if(o.value===dept) {{sel.value=dept; break;}} }}
   renderBatchUI();
   $$('regOv').style.display='flex';
 }}
-
-function closeReg() {{ $$('regOv').style.display='none'; batch=[]; editMode=false; editOrig=null; renderBatchUI(); }}
-
-// 時・分フィールドから "YYYY-MM-DD HH:MM" を生成（日跨ぎ対応）
-function getStartEnd() {{
-  const ds = $$('mDate').value;
-  const sh = parseInt($$('mSH').value)||0;
-  const sm = parseInt($$('mSM').value)||0;
-  const eh = parseInt($$('mEH').value)||0;
-  const em = parseInt($$('mEM').value)||0;
-
-  const startDt = `${{ds}} ${{p2(sh)}}:${{p2(sm)}}`;
-
-  // 終了が24時以上なら翌日
-  if(eh>=24) {{
-    const nextDate = new Date(ds+'T00:00:00'); nextDate.setDate(nextDate.getDate()+1);
-    const nextDs = fmt(nextDate);
-    const realEH = eh-24;
-    const endDt = `${{nextDs}} ${{p2(realEH)}}:${{p2(em)}}`;
-    return {{startDt, endDt, valid: sh<24 && em<=59 && sm<=59}};
-  }}
-  const endDt = `${{ds}} ${{p2(eh)}}:${{p2(em)}}`;
-  return {{startDt, endDt, valid: sh<24 && em<=59 && sm<=59 && (eh*60+em) > (sh*60+sm)}};
-}}
-
+function closeReg() {{ $$('regOv').style.display='none'; batch=[]; renderBatchUI(); }}
 function addBatch() {{
   const staff=$$('mStaff').value, dept=$$('mDept').value;
-  const {{startDt, endDt, valid}} = getStartEnd();
-  if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
-  if(!valid){{alert('時間が不正です。終了は開始より後にしてください');return;}}
-  batch.push({{staff,dept,start:startDt,end:endDt}});
+  const ds=$$('mDate').value, s=$$('mS').value, e=$$('mE').value;
+  if(!staff||!dept||!ds||!s||!e){{alert('すべて入力してください');return;}}
+  if(s>=e){{alert('終了は開始より後にしてください');return;}}
+  batch.push({{staff,dept,date:ds,start:s,end:e}});
   renderBatchUI();
-  showToast(`➕ ${{staff}} ${{startDt.slice(11)}}-${{endDt.slice(11)}}`,'ok',1800);
+  showToast(`➕ ${{staff}} ${{s}}-${{e}}`,'ok',1800);
 }}
-
 function renderBatchUI() {{
   const sec=$$('batchSec'), lst=$$('batchList'), cnt=$$('batchCnt'), lbl=$$('regLbl');
   if(!batch.length){{sec.style.display='none';lbl.textContent='';return;}}
@@ -1013,63 +817,30 @@ function renderBatchUI() {{
   lst.innerHTML='';
   batch.forEach((item,i)=>{{
     const row=mk('div','bi');
-    const lb=mk('div','bilbl'); lb.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.start}}-${{item.end.slice(11)}}`;
+    const lb=mk('div','bilbl'); lb.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.date}} ${{item.start}}-${{item.end}}`;
     const dl=mk('button','bidel'); dl.textContent='✕'; dl.onclick=()=>{{batch.splice(i,1);renderBatchUI();}};
     row.appendChild(lb); row.appendChild(dl); lst.appendChild(row);
   }});
 }}
-
 async function saveAll() {{
-  // 編集モード
-  if(editMode && editOrig) {{
-    const staff=$$('mStaff').value, dept=$$('mDept').value;
-    const {{startDt, endDt, valid}} = getStartEnd();
-    if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
-    if(!valid){{alert('時間が不正です');return;}}
-    closeReg(); showLdg('更新中...');
-    const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-    let ok=false;
-    try {{
-      // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
-        start:norm(editOrig.start),end:norm(editOrig.end)}}));
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
-        start:startDt,end:endDt}}));
-      ok=true;
-    }} catch(ex){{console.warn(ex);}}
-    // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
-    if(idx>=0) {{
-      SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
-        start:startDt.replace(' ','T')+':00',
-        end:endDt.replace(' ','T')+':00'}};
-    }}
-    hideLdg();
-    showToast(ok?'✅ 更新しました':'⚠️ 画面更新済み（GAS側も確認してください）', ok?'ok':'wn');
-    renderView();
-    return;
-  }}
-
-  // 通常登録
   let items=[];
   if(batch.length>0) {{
     items=[...batch];
   }} else {{
     const staff=$$('mStaff').value, dept=$$('mDept').value;
-    const {{startDt, endDt, valid}} = getStartEnd();
-    if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
-    if(!valid){{alert('時間が不正です');return;}}
-    items=[{{staff,dept,start:startDt,end:endDt}}];
+    const ds=$$('mDate').value, s=$$('mS').value, e=$$('mE').value;
+    if(!staff||!dept||!ds||!s||!e){{alert('すべて入力してください');return;}}
+    if(s>=e){{alert('終了は開始より後にしてください');return;}}
+    items=[{{staff,dept,date:ds,start:s,end:e}}];
   }}
   closeReg(); showLdg(`${{items.length}}件 保存中...`);
   let ok=0,fail=0;
   for(const item of items) {{
     try {{
       await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,
-        start:item.start,end:item.end}}));
+        start:`${{item.date}} ${{item.start}}`,end:`${{item.date}} ${{item.end}}`}}));
       SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,
-        start:item.start.replace(' ','T')+':00',
-        end:item.end.replace(' ','T')+':00'}});
+        start:`${{item.date}}T${{item.start}}:00`,end:`${{item.date}}T${{item.end}}:00`}});
       ok++;
     }} catch{{fail++;}}
   }}
@@ -1079,7 +850,7 @@ async function saveAll() {{
 }}
 
 // ══════════════════════════════════════
-// 詳細 / 削除 / 編集
+// 詳細 / 削除
 // ══════════════════════════════════════
 function showDet(s) {{
   curS=s; curI=SHIFTS.indexOf(s);
@@ -1093,37 +864,6 @@ function showDet(s) {{
   $$('detOv').style.display='flex';
 }}
 function closeDet() {{ $$('detOv').style.display='none'; curS=null; }}
-
-function editShift() {{
-  if(!curS) return;
-  editMode=true; editOrig={{...curS}};
-  const st=pd_(curS.start), et=pd_(curS.end);
-  closeDet();
-
-  $$('regTitle').textContent = 'シフト編集';
-  $$('addBatchBtn').style.display='none';
-  $$('regHint').style.display='none';
-
-  $$('mDate').value = fmt(st);
-  $$('mSH').value = st.getHours();
-  $$('mSM').value = st.getMinutes();
-  // 終了が翌日なら36時間表記に
-  const diffDays = Math.floor((et - st) / 86400000);
-  if(diffDays>=1) {{
-    $$('mEH').value = et.getHours()+24;
-  }} else {{
-    $$('mEH').value = et.getHours();
-  }}
-  $$('mEM').value = et.getMinutes();
-  updateNextDayLabel();
-
-  const sel1=$$('mStaff'); for(const o of sel1.options) if(o.value===curS.staff){{sel1.value=curS.staff;break;}}
-  const sel2=$$('mDept');  for(const o of sel2.options) if(o.value===curS.dept) {{sel2.value=curS.dept; break;}}
-
-  renderBatchUI();
-  $$('regOv').style.display='flex';
-}}
-
 async function delShift() {{
   if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`)) return;
   const s=curS; closeDet(); showLdg('削除中...');
