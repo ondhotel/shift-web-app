@@ -90,16 +90,23 @@ def load_reservation_csv(filepath_or_buffer) -> pd.DataFrame:
         sheet = "当月分CSV" if "当月分CSV" in xl.sheet_names else xl.sheet_names[0]
         df = pd.read_excel(filepath_or_buffer, sheet_name=sheet, header=0)
     else:
-        # CSV
+        # --- ここから修正 ---
+        # CSV読み込み
         for enc in ["utf-8-sig", "utf-8", "shift_jis", "cp932"]:
             try:
-                df = pd.read_csv(filepath_or_buffer, encoding=enc)
+                # comment='[' を追加して で始まる行を無視する
+                df = pd.read_csv(filepath_or_buffer, encoding=enc, comment='[')
+                
+                # データ内の途中に紛れ込んでいる を正規表現で一括削除
+                # （例: "ZZ2026/04/11 1部屋目..." みたいなケース対策）
+                df = df.replace(r'\', '', regex=True)
                 break
             except:
                 pass
         else:
             raise ValueError("CSVの文字コードを判定できませんでした")
-
+        # --- ここまで修正 ---
+        
     # キャンセルを除外
     if "ステータス" in df.columns:
         df = df[df["ステータス"] != "キャンセル"].copy()
