@@ -248,7 +248,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   <div id="cal"></div>
 </div>
 
-<!-- 登録 / 編集モーダル -->
 <div class="ov" id="regOv" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
     <div class="mt">📋 <span id="regTitle">シフト登録</span> <span id="regLbl" style="font-size:11px;color:var(--tx2);font-weight:400;"></span></div>
@@ -283,7 +282,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   </div>
 </div>
 
-<!-- 詳細モーダル -->
 <div class="ov" id="detOv" style="display:none" onclick="if(event.target===this)closeDet()">
   <div class="modal">
     <div class="mt">📌 シフト詳細</div>
@@ -1082,7 +1080,8 @@ async function saveAll() {{
 // 詳細 / 削除 / 編集
 // ══════════════════════════════════════
 function showDet(s) {{
-  curS=s; curI=SHIFTS.indexOf(s);
+  if(!s) return;
+  curS={{...s}}; curI=SHIFTS.indexOf(s);
   const st=pd_(s.start), et=pd_(s.end), col=deptClr(s.dept);
   $$('detBody').innerHTML=`
     <span class="dchip" style="background:${{rgba(col,.25)}};color:${{col}}">${{s.dept}}</span>
@@ -1092,13 +1091,13 @@ function showDet(s) {{
     <div class="dr"><span class="di">⏱️</span><span>${{Math.round((et-st)/60000)}}分</span></div>`;
   $$('detOv').style.display='flex';
 }}
-function closeDet() {{ $$('detOv').style.display='none'; curS=null; }}
+function closeDet() {{ $$('detOv').style.display='none'; }}
 
 function editShift() {{
   if(!curS) return;
   editMode=true; editOrig={{...curS}};
   const st=pd_(curS.start), et=pd_(curS.end);
-  closeDet();
+  $$('detOv').style.display='none'; // closeDetではなく直接閉じる（データを残すため）
 
   $$('regTitle').textContent = 'シフト編集';
   $$('addBatchBtn').style.display='none';
@@ -1107,9 +1106,10 @@ function editShift() {{
   $$('mDate').value = fmt(st);
   $$('mSH').value = st.getHours();
   $$('mSM').value = st.getMinutes();
+  
   // 終了が翌日なら36時間表記に
   const diffDays = Math.floor((et - st) / 86400000);
-  if(diffDays>=1) {{
+  if(et.getDate() !== st.getDate() || diffDays > 0) {{
     $$('mEH').value = et.getHours()+24;
   }} else {{
     $$('mEH').value = et.getHours();
@@ -1126,7 +1126,7 @@ function editShift() {{
 
 async function delShift() {{
   if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`)) return;
-  const s=curS; closeDet(); showLdg('削除中...');
+  const s={{...curS}}; closeDet(); showLdg('削除中...');
   const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
   let ok=false;
   try {{
