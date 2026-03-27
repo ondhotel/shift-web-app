@@ -1,9 +1,3 @@
-"""
-カレンダービューコンポーネント
-- 表示バグ修正: topbar高さを auto にして cal が潰れない構造
-- ペースト修正: renderView後もイベント委任で動作
-- 複数日ペースト: 日付を複数選択してまとめて貼り付け
-"""
 import streamlit.components.v1 as components
 import json
 import pandas as pd
@@ -101,7 +95,13 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .mc.pmode:hover:not(.psel){{background:rgba(240,160,91,.1)!important;}}
 .dn{{font-size:11px;font-weight:600;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--mn);margin-bottom:2px;}}
 .tod .dn{{background:var(--ac);color:#fff;}}
-/* シフトチップ */
+
+/* 月ビュー専用: スタッフまとめ表示 */
+.m-group {{ background:rgba(255,255,255,0.03); border:1px solid var(--bd); border-radius:4px; margin-bottom:4px; overflow:hidden; }}
+.m-total {{ background:var(--ac); color:#000; font-weight:800; font-size:10px; padding:1px 4px; display:flex; justify-content:space-between; }}
+.m-depts {{ font-size:9px; padding:1px 4px; color:var(--tx2); line-height:1.2; }}
+
+/* シフトチップ (以前のスタイルも念のため維持) */
 .chip{{font-size:10px;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;cursor:pointer;}}
 .chip.copied{{outline:2px solid var(--cp);}}
 /* マージチップ */
@@ -197,7 +197,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 <body>
 <div id="app">
 
-  <!-- トップバー -->
   <div id="topbar">
     <div class="vtab">
       <button class="vt on" data-v="day">日</button>
@@ -211,7 +210,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
     </div>
     <button class="tdbtn" id="tdBtn">今日</button>
 
-    <!-- ペーストバナー（topbar内の2行目に折り返す） -->
     <div id="pbanner">
       <span class="pbl">📋 ペーストモード</span>
       <span class="pbcnt" id="pcnt"></span>
@@ -228,7 +226,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   <div id="cal"></div>
 </div>
 
-<!-- 登録モーダル -->
 <div class="ov" id="regOv" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
     <div class="mt">📋 シフト登録 <span id="regLbl" style="font-size:11px;color:var(--tx2);font-weight:400;"></span></div>
@@ -256,7 +253,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   </div>
 </div>
 
-<!-- 詳細モーダル -->
 <div class="ov" id="detOv" style="display:none" onclick="if(event.target===this)closeDet()">
   <div class="modal">
     <div class="mt">📌 シフト詳細</div>
@@ -525,49 +521,43 @@ function renderMonth() {{
 
       const dn=mk('div','dn'); dn.textContent=cell.d; mc.appendChild(dn);
 
-      // シフト表示（連続マージ）
+      // シフト表示（集計ガッチャンコ版）
       const dayS = shOn(ds, fil);
-      const byStaff = {{}};
-      dayS.forEach(s => {{ if(!byStaff[s.staff])byStaff[s.staff]=[]; byStaff[s.staff].push(s); }});
-      const items=[];
-      Object.values(byStaff).forEach(arr => {{
-        arr.sort((a,b)=>sMins(a)-sMins(b));
-        let i=0;
-        while(i<arr.length) {{
-          let g=[arr[i]];
-          while(i+1<arr.length && eMins(arr[i])+MERGE_GAP>=sMins(arr[i+1])) {{ i++; g.push(arr[i]); }}
-          items.push(g); i++;
-        }}
+      const summary = {{}};
+      dayS.forEach(s => {{
+        if(!summary[s.staff]) summary[s.staff] = {{ depts: [], starts: [], ends: [], raw: [] }};
+        summary[s.staff].depts.push(s.dept);
+        summary[s.staff].starts.push(new Date(s.start));
+        summary[s.staff].ends.push(new Date(s.end));
+        summary[s.staff].raw.push(s);
       }});
-      items.slice(0,3).forEach(g => {{
-        const f=g[0], l=g[g.length-1], col=deptClr(f.dept);
-        const isCopied = clip && f.staff===clip.staff && f.start===clip.start;
-        if(g.length===1) {{
-          const ch=mk('div','chip'+(isCopied?' copied':''));
-          ch.style.cssText=`background:${{rgba(col,.25)}};color:${{col}};border-left:3px solid ${{col}}`;
-          const s0=pd_(f.start),e0=pd_(f.end);
-          ch.textContent=`${{f.staff}} ${{p2(s0.getHours())}}:${{p2(s0.getMinutes())}}-${{p2(e0.getHours())}}:${{p2(e0.getMinutes())}}`;
-          ch.dataset.idx = SHIFTS.indexOf(f);
-          mc.appendChild(ch);
-        }} else {{
-          const mm=mk('div','mmerge'+(isCopied?' copied':''));
-          mm.style.cssText=`border-left:3px solid ${{col}};background:${{rgba(col,.12)}};color:${{col}};`;
-          const s0=pd_(f.start),eN=pd_(l.end);
-          const hdr=mk('div','mseg');
-          hdr.style.cssText=`background:${{rgba(col,.3)}};font-weight:700;`;
-          hdr.textContent=`${{f.staff}} ${{p2(s0.getHours())}}:${{p2(s0.getMinutes())}}-${{p2(eN.getHours())}}:${{p2(eN.getMinutes())}}`;
-          mm.appendChild(hdr);
-          g.forEach(s=>{{
-            const sg=mk('div','mseg'); sg.dataset.idx=SHIFTS.indexOf(s);
-            const ss_=pd_(s.start),se_=pd_(s.end);
-            sg.style.cssText=`background:${{rgba(col,.15)}};font-size:9px;border-top:1px solid ${{rgba(col,.2)}};`;
-            sg.textContent=`${{s.dept}} ${{p2(ss_.getHours())}}:${{p2(ss_.getMinutes())}}-${{p2(se_.getHours())}}:${{p2(se_.getMinutes())}}`;
-            mm.appendChild(sg);
-          }});
-          mc.appendChild(mm);
-        }}
-      }});
-      if(items.length>3) {{ const mm=mk('div','mmore'); mm.textContent=`+${{items.length-3}}件`; mc.appendChild(mm); }}
+
+      for(const staff in summary) {{
+        const info = summary[staff];
+        const minS = new Date(Math.min(...info.starts));
+        const maxE = new Date(Math.max(...info.ends));
+        const timeStr = minS.getHours() + ':' + String(minS.getMinutes()).padStart(2,'0') + '-' + maxE.getHours() + ':' + String(maxE.getMinutes()).padStart(2,'0');
+        const isCopied = clip && staff === clip.staff && info.raw.some(s => s.start === clip.start);
+
+        const groupDiv = mk('div','mmerge' + (isCopied?' copied':''));
+        const col = deptClr(info.raw[0].dept);
+        groupDiv.style.cssText = `border-left:3px solid ${{col}}; background:${{rgba(col,.12)}}; color:${{col}};`;
+        
+        const hdr = mk('div','mseg');
+        hdr.style.cssText = `background:${{rgba(col,.3)}}; font-weight:700;`;
+        hdr.innerHTML = `<span>${{staff}}</span> <span style="float:right; font-size:9px;">${{timeStr}}</span>`;
+        groupDiv.appendChild(hdr);
+
+        const dlst = mk('div','mseg');
+        dlst.style.cssText = `font-size:9px; color:var(--tx2);`;
+        dlst.textContent = info.depts.join(' / ');
+        groupDiv.appendChild(dlst);
+        
+        // 詳細を開くために生データを保持（代表として1件目のインデックス）
+        groupDiv.dataset.idx = SHIFTS.indexOf(info.raw[0]);
+        mc.appendChild(groupDiv);
+      }}
+
       row.appendChild(mc);
     }});
     mg.appendChild(row);
@@ -587,6 +577,7 @@ function calcLanes(shifts) {{
     let lane=-1;
     for(let i=0;i<lanes.length;i++) {{ if(lanes[i]<=s.sm){{lane=i;lanes[i]=s.em;break;}} }}
     if(lane===-1) {{ lane=lanes.length; lanes.push(s.em); }}
+    // laneとtotalをセット（mkBlockで使用）
     s.lane=lane;
   }});
   sorted.forEach(s=>s.total=lanes.length);
@@ -720,13 +711,13 @@ function mkBlock(s, showStaff, offsetMins, lane, total) {{
   const W=100/total, L=lane*W;
   b.style.cssText=`top:${{top}}px;height:${{ht}}px;background:${{rgba(col,.3)}};border-left:3px solid ${{col}};color:${{col}};left:${{L+0.4}}%;width:${{W-0.8}}%;`;
   
-  // ★重要：クリックした時にこのシフトデータ(s)を保持するように修正
+  // クリックした時にこのシフトデータ(s)を保持するように修正
   b.onclick = (e) => {{
     e.stopPropagation();
     if (clip) {{
       togglePasteDate(fmt(pd_(s.start)));
     }} else {{
-      showDet(s); // 詳細モーダルを開く。ここで curS に s がセットされます
+      showDet(s); // 詳細モーダルを開く
     }}
   }};
 
