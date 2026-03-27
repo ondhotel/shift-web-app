@@ -735,7 +735,7 @@ function renderWeek() {{
     let cls=`whd${{ds===td?' tod':''}}${{dow===0?' sun':dow===6?' sat':''}}${{clip?' pmode':''}}${{isPsel?' psel':''}}`;
     const hd=mk('div',cls);
     hd.dataset.date=ds;
-    hd.innerHTML=`<div class="wdow">${{DAYS[dow]}}</div><div class="wdn">${{d.getDate()}}</div>`;
+    hd.innerHTML=`<div class="swdow">${{DAYS[dow]}}</div><div class="swdn">${{d.getDate()}}</div>`;
     whdr.appendChild(hd);
   }}
   wv.appendChild(whdr);
@@ -1024,27 +1024,55 @@ async function saveAll() {{
     const {{startDt, endDt, valid}} = getStartEnd();
     if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
     if(!valid){{alert('時間が不正です');return;}}
-    closeReg(); showLdg('更新中...');
+    closeReg(); 
+    showLdg('更新中...');
+    
+    // 秒なし形式（GAS送信用）
     const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-    let ok=false;
+    
     try {{
-      // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
-        start:norm(editOrig.start),end:norm(editOrig.end)}}));
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
-        start:startDt,end:endDt}}));
-      ok=true;
-    }} catch(ex){{console.warn(ex);}}
-    // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
-    if(idx>=0) {{
-      SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
-        start:startDt.replace(' ','T')+':00',
-        end:endDt.replace(' ','T')+':00'}};
+      // 1. 旧データ削除
+      await fetch(GAS+'?'+new URLSearchParams({{
+        action:'del_shift',
+        name:editOrig.staff,
+        dept:editOrig.dept,
+        start:norm(editOrig.start),
+        end:norm(editOrig.end)
+      }}));
+      
+      // 2. 新データ追加
+      await fetch(GAS+'?'+new URLSearchParams({{
+        action:'add_shift',
+        name:staff,
+        dept:dept,
+        start:startDt,
+        end:endDt
+      }}));
+
+      // 3. ローカル配列の置換
+      const idx = SHIFTS.findIndex(x => 
+        x.staff === editOrig.staff && 
+        x.dept === editOrig.dept && 
+        x.start === editOrig.start
+      );
+      
+      if(idx >= 0) {{
+        SHIFTS[idx] = {{
+          ...SHIFTS[idx],
+          staff: staff,
+          dept: dept,
+          start: startDt.replace(' ','T')+':00',
+          end: endDt.replace(' ','T')+':00'
+        }};
+      }}
+      showToast('✅ 更新しました', 'ok');
+    }} catch(ex) {{
+      console.error(ex);
+      showToast('⚠️ 更新に失敗しました（GAS側を確認してください）', 'wn');
+    }} finally {{
+      hideLdg();
+      renderView();
     }}
-    hideLdg();
-    showToast(ok?'✅ 更新しました':'⚠️ 画面更新済み（GAS側も確認してください）', ok?'ok':'wn');
-    renderView();
     return;
   }}
 
@@ -1059,21 +1087,26 @@ async function saveAll() {{
     if(!valid){{alert('時間が不正です');return;}}
     items=[{{staff,dept,start:startDt,end:endDt}}];
   }}
-  closeReg(); showLdg(`${{items.length}}件 保存中...`);
+  closeReg(); 
+  showLdg(`${{items.length}}件 保存中...`);
+  
   let ok=0,fail=0;
-  for(const item of items) {{
-    try {{
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,
-        start:item.start,end:item.end}}));
-      SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,
-        start:item.start.replace(' ','T')+':00',
-        end:item.end.replace(' ','T')+':00'}});
-      ok++;
-    }} catch{{fail++;}}
+  try {{
+    for(const item of items) {{
+      try {{
+        await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,
+          start:item.start,end:item.end}}));
+        SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,
+          start:item.start.replace(' ','T')+':00',
+          end:item.end.replace(' ','T')+':00'}});
+        ok++;
+      }} catch{{fail++;}}
+    }}
+    showToast(fail===0?`✅ ${{ok}}件 保存しました`:`⚠️ ${{ok}}件成功/${{fail}}件失敗`, fail===0?'ok':'wn');
+  }} finally {{
+    hideLdg();
+    renderView();
   }}
-  hideLdg();
-  showToast(fail===0?`✅ ${{ok}}件 保存しました`:`⚠️ ${{ok}}件成功/${{fail}}件失敗`, fail===0?'ok':'wn');
-  renderView();
 }}
 
 // ══════════════════════════════════════
@@ -1097,7 +1130,7 @@ function editShift() {{
   if(!curS) return;
   editMode=true; editOrig={{...curS}};
   const st=pd_(curS.start), et=pd_(curS.end);
-  $$('detOv').style.display='none'; // closeDetではなく直接閉じる（データを残すため）
+  $$('detOv').style.display='none'; 
 
   $$('regTitle').textContent = 'シフト編集';
   $$('addBatchBtn').style.display='none';
@@ -1107,7 +1140,6 @@ function editShift() {{
   $$('mSH').value = st.getHours();
   $$('mSM').value = st.getMinutes();
   
-  // 終了が翌日なら36時間表記に
   const diffDays = Math.floor((et - st) / 86400000);
   if(et.getDate() !== st.getDate() || diffDays > 0) {{
     $$('mEH').value = et.getHours()+24;
@@ -1128,18 +1160,21 @@ async function delShift() {{
   if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`)) return;
   const s={{...curS}}; closeDet(); showLdg('削除中...');
   const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-  let ok=false;
+  
   try {{
     const r=await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,
       start:norm(s.start),end:norm(s.end)}}));
-    const t=await r.text();
-    ok=r.ok&&(t.includes('delet')||t.includes('ok')||t.trim().length===0);
-  }} catch(ex){{console.warn(ex);}}
-  const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
-  if(i>=0) SHIFTS.splice(i,1);
-  hideLdg();
-  showToast(ok?'🗑️ 削除しました':'🗑️ 画面から削除（GAS側も確認してください）', ok?'ok':'wn');
-  renderView();
+    
+    const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
+    if(i>=0) SHIFTS.splice(i,1);
+    showToast('🗑️ 削除しました', 'ok');
+  }} catch(ex){{
+    console.warn(ex);
+    showToast('⚠️ 削除失敗または通信エラー', 'wn');
+  }} finally {{
+    hideLdg();
+    renderView();
+  }}
 }}
 
 // ══════════════════════════════════════
