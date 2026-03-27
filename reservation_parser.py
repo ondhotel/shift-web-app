@@ -90,24 +90,21 @@ def load_reservation_csv(filepath_or_buffer) -> pd.DataFrame:
         sheet = "当月分CSV" if "当月分CSV" in xl.sheet_names else xl.sheet_names[0]
         df = pd.read_excel(filepath_or_buffer, sheet_name=sheet, header=0)
     else:
-        # --- ここから修正 ---
-        # CSV読み込み
+        # --- CSV読み込み処理の修正版 ---
         for enc in ["utf-8-sig", "utf-8", "shift_jis", "cp932"]:
             try:
-                # comment='[' を追加して で始まる行を無視する
+                # で始まる行をスキップするために comment='[' を追加 [cite: 1]
                 df = pd.read_csv(filepath_or_buffer, encoding=enc, comment='[')
                 
-                # データ内の途中に紛れ込んでいる を正規表現で一括削除
-                # （例: "ZZ2026/04/11 1部屋目..." みたいなケース対策）
+                # データ内に残った を一括置換で消去 [cite: 1]
                 df = df.replace(r'\', '', regex=True)
                 break
-            except:
-                pass
+            except Exception:
+                continue
         else:
             raise ValueError("CSVの文字コードを判定できませんでした")
-        # --- ここまで修正 ---
-        
-    # キャンセルを除外
+
+    # キャンセルを除外 [cite: 1]
     if "ステータス" in df.columns:
         df = df[df["ステータス"] != "キャンセル"].copy()
 
@@ -120,12 +117,12 @@ def load_reservation_csv(filepath_or_buffer) -> pd.DataFrame:
     df["CI_date"] = ci_list
     df["CO_date"] = co_list
 
-    # 人数
+    # 人数 [cite: 1]
     df["大人人数"] = pd.to_numeric(df.get("大人人数", 0), errors="coerce").fillna(0).astype(int)
     df["子供人数"] = pd.to_numeric(df.get("子供人数", 0), errors="coerce").fillna(0).astype(int)
     df["合計人数"] = df["大人人数"] + df["子供人数"]
 
-    # プラン分類フラグ
+    # プラン分類フラグ [cite: 1]
     df["プラン名_str"] = df.get("プラン名", "").fillna("").astype(str)
     for cat, rule in PLAN_RULES.items():
         df[f"is_{cat}"] = df["プラン名_str"].apply(rule)
