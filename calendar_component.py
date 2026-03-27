@@ -40,7 +40,6 @@ def render_calendar_component(df: pd.DataFrame, staff_list: list, dept_list: lis
 *{{margin:0;padding:0;box-sizing:border-box;}}
 html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fn);font-size:13px;user-select:none;}}
 
-/* ── レイアウト ── */
 #app{{display:flex;flex-direction:column;height:{H}px;}}
 #topbar{{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sf);border-bottom:1px solid var(--bd);flex-wrap:wrap;}}
 #pbanner{{display:none;width:100%;align-items:center;gap:8px;padding:4px 0 2px;flex-wrap:wrap;}}
@@ -50,20 +49,19 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .pbb{{padding:3px 10px;border-radius:5px;border:1px solid var(--cp);background:rgba(240,160,91,.15);color:var(--cp);cursor:pointer;font-size:11px;font-family:var(--fn);font-weight:600;}}
 #cal{{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}}
 
-/* ── トップバーUI ── */
 .vtab{{display:flex;background:var(--sf2);border-radius:7px;padding:3px;gap:2px;}}
-.vt{{padding:4px 13px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:500;color:var(--tx2);border:none;background:transparent;font-family:var(--fn);}}
+.vt{{padding:4px 13px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:500;color:var(--tx2);border:none;background:transparent;}}
 .vt.on{{background:var(--ac);color:#fff;}}
 .navg{{display:flex;align-items:center;gap:5px;}}
 .nb{{width:28px;height:28px;border-radius:5px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);cursor:pointer;display:flex;align-items:center;justify-content:center;}}
 #plbl{{font-size:14px;font-weight:700;min-width:160px;text-align:center;}}
-.tdbtn{{padding:4px 11px;border-radius:5px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);cursor:pointer;font-size:12px;font-family:var(--fn);}}
+.tdbtn{{padding:4px 11px;border-radius:5px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);cursor:pointer;font-size:12px;}}
 .fgrp{{display:flex;gap:6px;margin-left:auto;align-items:center;}}
-.fsel{{padding:4px 7px;border-radius:5px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-size:12px;font-family:var(--fn);}}
+.fsel{{padding:4px 7px;border-radius:5px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-size:12px;}}
 
 /* ── ビュー共通 ── */
-.mv,.wv,.dv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
-.mgrid,.wbody,.dbody{{flex:1;overflow-y:auto;position:relative;}}
+.mv,.wv,.dv,.sv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
+.mgrid,.wbody,.dbody,.sbody{{flex:1;overflow-y:auto;position:relative;}}
 .mrow,.whdr,.dshdr{{display:grid;border-bottom:1px solid var(--bd);flex-shrink:0;}}
 .mhdr,.mhc{{padding:6px 0;text-align:center;font-size:11px;font-weight:600;color:var(--tx2);}}
 .mc{{border-right:1px solid var(--bd);padding:4px;cursor:pointer;min-height:75px;position:relative;}}
@@ -73,15 +71,15 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 .mmerge{{border-radius:3px;margin-bottom:2px;overflow:hidden;cursor:pointer;font-size:10px;font-weight:500;}}
 .mseg{{padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
 
-/* 週（スタッフ）: スクショ撮影用に全体が見える高さ設定 */
-.sw-container {{ flex: 1; overflow-y: auto; background: var(--bg); }}
+/* 週（スタッフ）: スクショ用全体表示 */
 .sw-grid {{ display: grid; grid-template-columns: 100px repeat(7, 1fr); background: var(--bg); }}
 .sw-head {{ background: var(--sf); border-bottom: 2px solid var(--bd); padding: 8px; font-weight: 700; text-align: center; position: sticky; top: 0; z-index: 10; border-right: 1px solid var(--bd); }}
 .sw-staff-cell {{ background: var(--sf); border-bottom: 1px solid var(--bd); border-right: 1px solid var(--bd); padding: 8px; font-weight: 600; position: sticky; left: 0; z-index: 5; display: flex; align-items: center; }}
 .sw-day-cell {{ border-bottom: 1px solid var(--bd); border-right: 1px solid var(--bd); padding: 4px; min-height: 60px; cursor: pointer; }}
 
 /* 日・週（時間） */
-.wdcol,.dscol{{position:relative;border-right:1px solid var(--bd);cursor:crosshair;}}
+.wdcol{{position:relative;border-right:1px solid var(--bd);cursor:crosshair;height:1152px;}} /* 24h * 48px */
+.dscol{{position:relative;border-right:1px solid var(--bd);cursor:crosshair;height:1440px;}} /* 30h * 48px */
 .sb{{position:absolute;border-radius:4px;padding:2px 4px;font-size:10px;font-weight:600;overflow:hidden;z-index:1;cursor:pointer;border:1px solid rgba(255,255,255,.1);}}
 .dragsel{{position:absolute;left:2px;right:2px;background:var(--drag);border:2px dashed var(--ac);border-radius:4px;z-index:10;pointer-events:none;}}
 .nowl{{position:absolute;left:58px;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
@@ -124,7 +122,7 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
     <div class="fg"><label class="fl">従業員</label><select class="fs2" id="mStaff"></select></div>
     <div class="fg"><label class="fl">部門</label><select class="fs2" id="mDept"></select></div>
     <div class="fg"><label class="fl">日付</label><input type="date" class="fi" id="mDate"></div>
-    <div class="fg"><label class="fl">時間 (25:00等も可)</label><div style="display:grid;grid-template-columns:1fr 20px 1fr;align-items:center;"><input type="text" class="fi" id="mS" value="09:00"><span>→</span><input type="text" class="fi" id="mE" value="18:00"></div></div>
+    <div class="fg"><label class="fl">時間 (夜勤は25:00等も可)</label><div style="display:grid;grid-template-columns:1fr 20px 1fr;align-items:center;"><input type="text" class="fi" id="mS" value="09:00"><span>→</span><input type="text" class="fi" id="mE" value="18:00"></div></div>
     <div class="ma"><button class="btn bs" onclick="closeReg()">閉じる</button><button class="btn bp" onclick="saveShift()">保存</button></div>
   </div>
 </div>
@@ -187,12 +185,12 @@ function renderView() {{
   updateBanner();
 }}
 
-// ── 週（スタッフ）: 全体をスクショ撮影可能な高さで表示 ──
+// ── 週（スタッフ）: 全体が見える高さで描画 ──
 function renderStaffWeek() {{
   const ws = new Date(cur); ws.setDate(cur.getDate() - cur.getDay());
   $$('plbl').textContent = `${{fmt(ws)}} の週`;
   const fil = getFil(), root = $$('cal');
-  const container = mk('div', 'sw-container');
+  const container = mk('div', 'sbody');
   const sw = mk('div', 'sw-grid');
   sw.appendChild(mk('div', 'sw-head'));
   for(let i=0; i<7; i++) {{
@@ -209,12 +207,10 @@ function renderStaffWeek() {{
       if(pasteDates.has(ds)) dc.classList.add('psel');
       const dayS = fil.filter(x => x.staff === s && x.start.startsWith(ds));
       if(dayS.length) {{
-        const minS = new Date(Math.min(...dayS.map(x=>new Date(x.start))));
         const m = mk('div', 'mmerge'); const col = deptClr(dayS[0].dept);
         m.style.cssText = `border-left:3px solid ${{col}}; background:${{rgba(col,.1)}}; color:${{col}};`;
-        m.innerHTML = `<div class="mseg"><b>${{minS.getHours()}}:${{p2(minS.getMinutes())}}-</b></div>`;
-        m.dataset.idx = SHIFTS.indexOf(dayS[0]);
-        dc.appendChild(m);
+        m.innerHTML = `<div class="mseg"><b>${{dayS[0].start.split('T')[1].slice(0,5)}}</b></div>`;
+        m.dataset.idx = SHIFTS.indexOf(dayS[0]); dc.appendChild(m);
       }}
       sw.appendChild(dc);
     }}
@@ -222,7 +218,7 @@ function renderStaffWeek() {{
   container.appendChild(sw); root.appendChild(container);
 }}
 
-// ── ドラッグ計算用 (スクロールズレ修正) ──
+// ── ドラッグ計算 (スクロール対応) ──
 function setupDrag(col, ds, dsN, s) {{
   col.onmousedown = (e) => {{
     if(clip || e.target.closest('.sb')) return;
@@ -247,9 +243,10 @@ function setupDrag(col, ds, dsN, s) {{
   }};
 }}
 
-// ── 保存・修正 ──
+// ── 保存・修正ロジック ──
 async function saveShift() {{
   const name = $$('mStaff').value, dept = $$('mDept').value, d = $$('mDate').value, sT = $$('mS').value, eT = $$('mE').value;
+  if(!name || !dept || !d || !sT || !eT) return;
   showLdg("保存中...");
   if($$('mEditMode').value === "1" && curS) {{
     await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift', name:curS.staff, dept:curS.dept, start:curS.start.replace('T',' ').slice(0,16), end:curS.end.replace('T',' ').slice(0,16)}}));
@@ -265,13 +262,11 @@ async function saveShift() {{
 function openReg(ds, st, en, staff) {{
   $$('mTitle').textContent = "📋 シフト登録"; $$('mEditMode').value = "0";
   $$('mDate').value = ds; $$('mS').value = st; $$('mE').value = en;
-  if(staff) $$('mStaff').value = staff;
-  $$('regOv').style.display = 'flex';
+  if(staff) $$('mStaff').value = staff; $$('regOv').style.display = 'flex';
 }}
 function openEdit() {{
-  const s = curS; closeDet(); $$('mTitle').textContent = "📝 修正"; $$('mEditMode').value = "1";
-  $$('mStaff').value = s.staff; $$('mDept').value = s.dept;
-  $$('mDate').value = s.start.split('T')[0];
+  const s = curS; if(!s) return; closeDet(); $$('mTitle').textContent = "📝 修正"; $$('mEditMode').value = "1";
+  $$('mStaff').value = s.staff; $$('mDept').value = s.dept; $$('mDate').value = s.start.split('T')[0];
   $$('mS').value = s.start.split('T')[1].slice(0,5);
   let et = s.end.split('T')[1].slice(0,5);
   if(new Date(s.end).getDate() !== new Date(s.start).getDate()) {{
@@ -280,7 +275,7 @@ function openEdit() {{
   $$('mE').value = et; $$('regOv').style.display = 'flex';
 }}
 
-// ── 月別 (1人1ブロックに集約して表示) ──
+// ── 月別 (1人1ブロックに集約) ──
 function renderMonth() {{
   const y=cur.getFullYear(), mo=cur.getMonth(); $$('plbl').textContent=`${{y}}年${{mo+1}}月`;
   const fil=getFil(), first=new Date(y,mo,1), sdow=first.getDay();
@@ -295,8 +290,7 @@ function renderMonth() {{
       mc.dataset.date=ds; if(pasteDates.has(ds)) mc.classList.add('psel');
       mc.innerHTML=`<div class="dn">${{d.getDate()}}</div>`;
       const dayS = fil.filter(x=>x.start.startsWith(ds));
-      const summary = {{}};
-      dayS.forEach(s => {{ if(!summary[s.staff]) summary[s.staff] = s; }});
+      const summary = {{}}; dayS.forEach(s => {{ if(!summary[s.staff]) summary[s.staff] = s; }});
       Object.values(summary).forEach(x=>{{
         const m=mk('div','mmerge'); const col=deptClr(x.dept);
         m.style.cssText=`border-left:3px solid ${{col}};background:${{rgba(col,0.1)}};color:${{col}};`;
@@ -310,7 +304,7 @@ function renderMonth() {{
   mv.appendChild(mg); $$('cal').appendChild(mv);
 }}
 
-// ── 週別 (元のLane計算ロジック) ──
+// ── 週別 (Lane計算復旧) ──
 function renderWeek() {{
   const ws=new Date(cur); ws.setDate(cur.getDate()-cur.getDay()); $$('plbl').textContent=`${{fmt(ws)}} 〜`;
   const fil=getFil(), root=$$('cal'), wv=mk('div','wv'), wh=mk('div','whdr'); wh.appendChild(mk('div','wcrn'));
@@ -330,8 +324,7 @@ function renderWeek() {{
       const st=pd_(x.start), et=pd_(x.end);
       return {{...x, sm:st.getHours()*60+st.getMinutes(), em:et.getHours()*60+et.getMinutes()+(et.getDate()!==st.getDate()?1440:0)}};
     }});
-    const sorted = dayS.sort((a,b)=>a.sm-b.sm);
-    const lanes = [];
+    const sorted = dayS.sort((a,b)=>a.sm-b.sm), lanes = [];
     sorted.forEach(s => {{
       let l=-1; for(let j=0;j<lanes.length;j++) if(lanes[j]<=s.sm){{l=j;lanes[j]=s.em;break;}}
       if(l===-1){{l=lanes.length;lanes.push(s.em);}}
@@ -374,7 +367,7 @@ function mkBlock(s, offset) {{
 
 function showDet(s) {{
   curS = s; const col = deptClr(s.dept);
-  $$('detBody').innerHTML = `<div style="padding:4px;border-radius:4px;background:${{rgba(col,.2)}};color:${{col}};margin-bottom:8px;">${{s.dept}}</div><div>👤 ${{s.staff}}</div><div>🕐 ${{s.start.replace('T',' ').slice(5,16)}} 〜</div>`;
+  $$('detBody').innerHTML = `<div style="padding:4px;border-radius:4px;background:${{rgba(col,.2)}};color:${{col}};margin-bottom:8px;">${{s.dept}}</div><div>👤 ${{s.staff}}</div><div>📅 ${{s.start.replace('T',' ').slice(5,16)}} 〜</div>`;
   $$('detOv').style.display = 'flex';
 }}
 function getFil() {{ const fs = $$('fstaff').value, fd = $$('fdept').value; return SHIFTS.filter(s => (!fs || s.staff === fs) && (!fd || s.dept === fd)); }}
@@ -406,4 +399,5 @@ async function delShift() {{
 </script>
 </body>
 </html>"""
+
     components.html(html, height=H, scrolling=False)
