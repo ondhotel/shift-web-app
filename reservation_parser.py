@@ -97,7 +97,7 @@ def load_reservation_csv(filepath_or_buffer) -> pd.DataFrame:
                 df = pd.read_csv(filepath_or_buffer, encoding=enc, comment='[')
                 
                 # データ内に残った を一括置換で消去 [cite: 1]
-                df = df.replace(r'\', '', regex=True)
+                df = df.replace(r'\\', '', regex=True)
                 break
             except Exception:
                 continue
