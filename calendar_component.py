@@ -1019,36 +1019,69 @@ function renderBatchUI() {{
   }});
 }}
 
-async function saveAll() {{
-  // 編集モード
-  if(editMode && editOrig) {{
-    const staff=$$('mStaff').value, dept=$$('mDept').value;
-    const {{startDt, endDt, valid}} = getStartEnd();
-    if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
-    if(!valid){{alert('時間が不正です');return;}}
-    closeReg(); showLdg('更新中...');
-    const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-    let ok=false;
-    try {{
-      // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
-        start:norm(editOrig.start),end:norm(editOrig.end)}}));
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
-        start:startDt,end:endDt}}));
-      ok=true;
-    }} catch(ex){{console.warn(ex);}}
-    // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
-    if(idx>=0) {{
-      SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
-        start:startDt.replace(' ','T')+':00',
-        end:endDt.replace(' ','T')+':00'}};
-    }}
-    hideLdg();
-    showToast(ok?'✅ 更新しました':'⚠️ 画面更新済み（GAS側も確認してください）', ok?'ok':'wn');
+async function saveAll() {
+  // ─── 編集モード ───
+  if(editMode && editOrig) {
+    const staff = $$('mStaff').value;
+    const dept = $$('mDept').value;
+    const {startDt, endDt, valid} = getStartEnd(); // getStartEndは "YYYY-MM-DD HH:MM" を返す
+    
+    if(!staff || !dept || !$$('mDate').value) { alert('すべて入力してください'); return; }
+    if(!valid) { alert('時間が不正です'); return; }
+    
+    closeReg(); 
+    showLdg('更新中...');
+
+    // GASに送るためのフォーマット整形 (ISOから秒を除いた YYYY-MM-DD HH:MM に)
+    const toGasFmt = (iso) => iso.replace('T', ' ').substring(0, 16);
+    const oldStart =惊toGasFmt(editOrig.start);
+    const oldEnd   = toGasFmt(editOrig.end);
+
+    try {
+      // 1. 旧データを削除
+      const delRes = await fetch(GAS + '?' + new URLSearchParams({
+        action: 'del_shift',
+        name:   editOrig.staff,
+        dept:   editOrig.dept,
+        start:  oldStart,
+        end:    oldEnd
+      }));
+
+      // 2. 新データを追加
+      const addRes = await fetch(GAS + '?' + new URLSearchParams({
+        action: 'add_shift',
+        name:   staff,
+        dept:   dept,
+        start:  startDt,
+        end:    endDt
+      }));
+
+      // 3. ローカルの SHIFTS 配列を更新 (表示に即時反映させるため)
+      // ID（rowIndex）やその他のプロパティを維持しつつ上書き
+      const idx = SHIFTS.findIndex(x => 
+        x.staff === editOrig.staff && 
+        x.start === editOrig.start && 
+        x.dept  === editOrig.dept
+      );
+
+      if (idx >= 0) {
+        SHIFTS[idx].staff = staff;
+        SHIFTS[idx].dept  = dept;
+        SHIFTS[idx].start = startDt.replace(' ', 'T') + ':00';
+        SHIFTS[idx].end   = endDt.replace(' ', 'T') + ':00';
+      }
+
+      hideLdg();
+      showToast('✅ 更新完了しました', 'ok');
+    } catch(ex) {
+      console.error(ex);
+      hideLdg();
+      showToast('⚠️ 通信エラーが発生しました', 'err');
+    }
+    
     renderView();
     return;
-  }}
+  }
 
   // 通常登録
   let items=[];
