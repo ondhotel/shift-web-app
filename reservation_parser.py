@@ -68,49 +68,60 @@ def extract_ci_co(row) -> tuple:
     ci_raw = row.get("C/I", None)
     co_raw = row.get("C/O", None)
 
-def try_parse(v):
-    if pd.isna(v) or v == "#######":
-        return None
-
-    # ① datetime型
-    if isinstance(v, datetime):
-        return v.date()
-
-    # ② 数値（Excel日付）
-    if isinstance(v, (int, float)):
-        try:
-            return (datetime(1899, 12, 30) + timedelta(days=float(v))).date()
-        except:
+    def try_parse(v):
+        if pd.isna(v) or v == "#######":
             return None
 
-    # ③ 文字列
-    if isinstance(v, str):
-        s = v.strip()
+        if isinstance(v, datetime):
+            return v.date()
 
-        # 全角→半角
-        s = s.translate(str.maketrans(
-            "０１２３４５６７８９／－",
-            "0123456789/-"
-        ))
-
-        # 時刻削除
-        s = re.sub(r"\s+\d{1,2}:\d{2}(:\d{2})?", "", s)
-
-        # 余計な文字削除（曜日など）
-        s = re.sub(r"[（(].*?[）)]", "", s)
-
-        # 日付抽出
-        m = re.search(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}", s)
-        if m:
+        if isinstance(v, (int, float)):
             try:
-                return datetime.strptime(m.group(), "%Y/%m/%d").date()
+                return (datetime(1899, 12, 30) + timedelta(days=float(v))).date()
             except:
-                try:
-                    return datetime.strptime(m.group(), "%Y-%m-%d").date()
-                except:
-                    pass
+                return None
 
-    return None
+        if isinstance(v, str):
+            s = v.strip()
+
+            s = s.translate(str.maketrans(
+                "０１２３４５６７８９／－",
+                "0123456789/-"
+            ))
+
+            s = re.sub(r"\s+\d{1,2}:\d{2}(:\d{2})?", "", s)
+            s = re.sub(r"[（(].*?[）)]", "", s)
+
+            m = re.search(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}", s)
+            if m:
+                for fmt in ("%Y/%m/%d", "%Y-%m-%d"):
+                    try:
+                        return datetime.strptime(m.group(), fmt).date()
+                    except:
+                        pass
+
+        return None
+
+    ci = try_parse(ci_raw)
+    co = try_parse(co_raw)
+
+    if ci is None:
+        combined = " ".join([
+            str(row.get("OTA備考", "") or ""),
+            str(row.get("メモ", "") or ""),
+        ])
+
+        dates_found = re.findall(r"ZZ(\d{4}/\d{2}/\d{2})", combined)
+        dates_found = sorted(set(dates_found))
+
+        if dates_found:
+            ci = datetime.strptime(dates_found[0], "%Y/%m/%d").date()
+
+            nights_found = re.findall(r"(\d+)泊目", combined)
+            max_night = max(int(n) for n in nights_found) if nights_found else 1
+            co = ci + timedelta(days=max_night)
+
+    return ci, co
 
     ci = try_parse(ci_raw)
     co = try_parse(co_raw)
