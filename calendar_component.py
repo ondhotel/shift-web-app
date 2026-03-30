@@ -1041,19 +1041,24 @@ async function saveAll() {{
     const {{startDt, endDt, valid}} = getStartEnd();
     if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
     if(!valid){{alert('時間が不正です');return;}}
-    closeReg(); showLdg('更新中...');
-    const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-    let ok=false;
-    try {{
-      // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
-        start:norm(editOrig.start),end:norm(editOrig.end)}}));
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
-        start:startDt,end:endDt}}));
-      ok=true;
-    }} catch(ex){{console.warn(ex);}}
-    // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
+   // 変更後
+showLdg('更新中...'); // ← closeReg()をここから外す
+const norm = iso => (iso.replace('T', ' ') + '').slice(0, 16);
+const savedOrig = {...editOrig}; // ← 先にコピーを保存
+let ok = false;
+try {
+  await fetch(...del_shift...);
+  await fetch(...add_shift...);
+  ok = true;
+} catch(ex) { console.warn(ex); }
+closeReg(); // ← awaitが全部終わった後に移動
+const idx = SHIFTS.findIndex(x => x.staff === savedOrig.staff && x.dept === savedOrig.dept && x.start === savedOrig.start);
+if(idx >= 0) {
+  SHIFTS[idx] = {...SHIFTS[idx], staff, dept,
+    start: startDt.replace(' ', 'T') + ':00',
+    end:   endDt.replace(' ', 'T') + ':00'};
+}
+hideLdg();
     if(idx>=0) {{
       SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
         start:startDt.replace(' ','T')+':00',
