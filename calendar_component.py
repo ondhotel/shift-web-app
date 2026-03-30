@@ -1041,24 +1041,18 @@ async function saveAll() {{
     const {{startDt, endDt, valid}} = getStartEnd();
     if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
     if(!valid){{alert('時間が不正です');return;}}
-   // 変更後
-showLdg('更新中...'); // ← closeReg()をここから外す
-const norm = iso => (iso.replace('T', ' ') + '').slice(0, 16);
-const savedOrig = {...editOrig}; // ← 先にコピーを保存
-let ok = false;
-try {
-  await fetch(...del_shift...);
-  await fetch(...add_shift...);
-  ok = true;
-} catch(ex) { console.warn(ex); }
-closeReg(); // ← awaitが全部終わった後に移動
-const idx = SHIFTS.findIndex(x => x.staff === savedOrig.staff && x.dept === savedOrig.dept && x.start === savedOrig.start);
-if(idx >= 0) {
-  SHIFTS[idx] = {...SHIFTS[idx], staff, dept,
-    start: startDt.replace(' ', 'T') + ':00',
-    end:   endDt.replace(' ', 'T') + ':00'};
-}
-hideLdg();
+    const savedOrig={{...editOrig}};
+    closeReg(); showLdg('更新中...');
+    const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
+    let ok=false;
+    try {{
+      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:savedOrig.staff,dept:savedOrig.dept,
+        start:norm(savedOrig.start),end:norm(savedOrig.end)}}));
+      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
+        start:startDt,end:endDt}}));
+      ok=true;
+    }} catch(ex){{console.warn(ex);}}
+    const idx=SHIFTS.findIndex(x=>x.staff===savedOrig.staff&&x.dept===savedOrig.dept&&x.start===savedOrig.start);
     if(idx>=0) {{
       SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
         start:startDt.replace(' ','T')+':00',
