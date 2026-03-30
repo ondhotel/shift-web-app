@@ -155,15 +155,16 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 
 /* ── 日ビュー ── */
 .dv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
-.dshdr{{display:flex;border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;}}
-.dcrn{{width:58px;min-width:58px;flex-shrink:0;padding:7px 4px;font-size:10px;color:var(--tx2);text-align:center;border-right:1px solid var(--bd);}}
-.dsch{{flex:1;min-width:88px;padding:6px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-.dbody{{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
-.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);}}
+.dscroll{{flex:1;overflow:auto;min-height:0;}}
+.dshdr{{display:flex;position:sticky;top:0;z-index:3;background:var(--sf);border-bottom:2px solid var(--bd);}}
+.dcrn{{position:sticky;left:0;z-index:4;width:58px;min-width:58px;flex-shrink:0;padding:7px 4px;font-size:10px;color:var(--tx2);text-align:center;border-right:1px solid var(--bd);background:var(--sf);}}
+.dsch{{min-width:120px;padding:6px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+.dbody{{display:flex;position:relative;}}
+.dtc{{position:sticky;left:0;z-index:2;width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);}}
 .dts{{height:48px;padding:3px 6px 0;border-bottom:1px solid var(--bd);font-size:10px;color:var(--tx2);font-family:var(--mn);text-align:right;}}
 .dts.mid{{border-top:2px solid var(--ac2);color:var(--ac2);font-weight:700;}}
-.dscs{{flex:1;display:flex;overflow-x:auto;}}
-.dscol{{flex:1;min-width:88px;border-right:1px solid var(--bd);position:relative;cursor:crosshair;}}
+.dscs{{display:flex;}}
+.dscol{{min-width:120px;border-right:1px solid var(--bd);position:relative;cursor:crosshair;}}
 .dhs{{height:48px;border-bottom:1px solid var(--bd);}}
 .nzone{{position:absolute;left:0;right:0;background:var(--nday);border-top:1px dashed var(--ac2);pointer-events:none;z-index:0;}}
 .nowl{{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
@@ -339,6 +340,7 @@ let curS = null, curI = -1;
 let dragSt = null;
 let editMode = false;   // 編集モードフラグ
 let editOrig = null;    // 編集対象の元データ
+let dragJustHappened = false;  // ドラッグ直後のクリック誤発火防止
 
 // ══════════════════════════════════════
 // 初期化
@@ -455,6 +457,8 @@ function onCalClick(e) {{
   }}
 
   // 通常クリック: data-openreg
+  // ★ ドラッグ直後はクリックイベントを無視（時間の上書き防止）
+  if (dragJustHappened) {{ dragJustHappened = false; return; }}
   const regEl = e.target.closest('[data-openreg]');
   if (regEl && !clip) {{
     const ds = regEl.dataset.openreg;
@@ -785,14 +789,21 @@ function renderDay() {{
   }}
 
   const dv=mk('div','dv');
+  // ── 単一スクロールコンテナ（sticky対応） ──
+  const dscroll=mk('div','dscroll');
+
+  // sticky top: スタッフ名ヘッダー
   const sh=mk('div','dshdr');
   const crn=mk('div','dcrn');
   crn.innerHTML=ds===td?'<span style="color:var(--ac);font-weight:700;font-size:11px">今日</span>':'';
   sh.appendChild(crn);
   staff.forEach(s=>{{ const h=mk('div','dsch'); h.textContent=s; sh.appendChild(h); }});
-  dv.appendChild(sh);
+  dscroll.appendChild(sh);
 
+  // ボディ（時間列＋スタッフ列）
   const db=mk('div','dbody');
+
+  // sticky left: 時間列
   const tc=mk('div','dtc');
   for(let h=0;h<DAY_H;h++) {{
     const ts=mk('div','dts'+(h===MID_H?' mid':''));
@@ -821,12 +832,17 @@ function renderDay() {{
        .forEach(x=>{{ if(pd_(x.start).getHours()<(DAY_H-MID_H)) col.appendChild(mkBlock(x,false,1440,0,1)); }});
     sc.appendChild(col);
   }});
-  db.appendChild(sc); dv.appendChild(db); root.appendChild(dv);
+  db.appendChild(sc);
 
+  // 現在時刻ライン（dbody基準・sticky-left分58pxオフセット）
   const now=new Date(), diff=(now-cur)/60000;
   if(diff>=0&&diff<DAY_H*60) {{
-    const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:58px;right:0;`; db.appendChild(nl);
+    const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:58px;right:0;position:absolute;`; db.appendChild(nl);
   }}
+
+  dscroll.appendChild(db);
+  dv.appendChild(dscroll);
+  root.appendChild(dv);
 }}
 
 // ══════════════════════════════════════
@@ -871,8 +887,8 @@ function setupDragWeek(col, dateStr) {{
     if(e.button||e.target.classList.contains('sb')) return;
     e.preventDefault();
     const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.wbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
+    // ★ getBoundingClientRect()はスクロール済み位置を返すのでscrollTop加算不要
+    const relY=e.clientY-rect.top;
     const sm=Math.max(0,snap(y2m(relY)));
     el=mk('div','dragsel'); el.style.top=sm/60*HPX+'px'; el.style.height='0'; col.appendChild(el);
     dragSt={{col,date:dateStr,sm,em:sm,el}};
@@ -880,8 +896,7 @@ function setupDragWeek(col, dateStr) {{
   col.addEventListener('mousemove', e => {{
     if(!dragSt||dragSt.col!==col) return;
     const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.wbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
+    const relY=e.clientY-rect.top;
     const em=Math.max(0,snap(y2m(relY)));
     dragSt.em=em;
     el.style.top=Math.min(dragSt.sm,em)/60*HPX+'px';
@@ -892,6 +907,7 @@ function setupDragWeek(col, dateStr) {{
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     el.remove(); const dt=dragSt.date; dragSt=null;
     if(en-s<5)return; // 誤クリック防止
+    dragJustHappened = true;  // ★ 後続clickイベントをブロック
     openReg(dt, null, null, '', '', s, en<s+15?s+60:en);
   }});
 }}
@@ -902,8 +918,8 @@ function setupDragDay(col, ds, dsN, staff) {{
     if(e.button||e.target.classList.contains('sb')) return;
     e.preventDefault();
     const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.dbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
+    // ★ getBoundingClientRect()はスクロール済み位置を返すのでscrollTop加算不要
+    const relY=e.clientY-rect.top;
     const sm=Math.min(Math.max(0,snap(y2m(relY))), DAY_H*60);
     el=mk('div','dragsel'); el.style.top=sm/60*HPX+'px'; el.style.height='0'; col.appendChild(el);
     dragSt={{col,ds,dsN,staff,sm,em:sm,el}};
@@ -911,8 +927,7 @@ function setupDragDay(col, ds, dsN, staff) {{
   col.addEventListener('mousemove', e => {{
     if(!dragSt||dragSt.col!==col) return;
     const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.dbody')?.scrollTop||0;
-    const relY=e.clientY-rect.top+scrollTop;
+    const relY=e.clientY-rect.top;
     const em=Math.min(Math.max(0,snap(y2m(relY))), DAY_H*60);
     dragSt.em=em;
     el.style.top=Math.min(dragSt.sm,em)/60*HPX+'px';
@@ -924,7 +939,7 @@ function setupDragDay(col, ds, dsN, staff) {{
     const isN=s>=1440, actualDs=isN?dragSt.dsN:dragSt.ds, stf=dragSt.staff;
     el.remove(); dragSt=null;
     if(en-s<5)return; // 誤クリック防止
-    // sとenをそのまま渡す（DAY_H対応: sが1440以上なら翌日扱い）
+    dragJustHappened = true;  // ★ 後続clickイベントをブロック
     openReg(actualDs, null, null, stf, '', s%1440, en<s+15?s+60:en);
   }});
 }}
@@ -1096,9 +1111,12 @@ function closeDet() {{ $$('detOv').style.display='none'; curS=null; }}
 
 function editShift() {{
   if(!curS) return;
+  // ★ closeDet()がcurS=nullにするので先にデータを保存
+  const staffName = curS.staff;
+  const deptName  = curS.dept;
   editMode=true; editOrig={{...curS}};
   const st=pd_(curS.start), et=pd_(curS.end);
-  closeDet();
+  closeDet(); // ← ここでcurS=nullになる
 
   $$('regTitle').textContent = 'シフト編集';
   $$('addBatchBtn').style.display='none';
@@ -1107,18 +1125,19 @@ function editShift() {{
   $$('mDate').value = fmt(st);
   $$('mSH').value = st.getHours();
   $$('mSM').value = st.getMinutes();
-  // 終了が翌日なら36時間表記に
-  const diffDays = Math.floor((et - st) / 86400000);
-  if(diffDays>=1) {{
-    $$('mEH').value = et.getHours()+24;
+  // 終了が翌日なら36時間表記に（DAY_H=30時間対応）
+  const diffMins = (et - st) / 60000;
+  if(diffMins > 23*60) {{
+    $$('mEH').value = et.getHours() + 24;
   }} else {{
     $$('mEH').value = et.getHours();
   }}
   $$('mEM').value = et.getMinutes();
   updateNextDayLabel();
 
-  const sel1=$$('mStaff'); for(const o of sel1.options) if(o.value===curS.staff){{sel1.value=curS.staff;break;}}
-  const sel2=$$('mDept');  for(const o of sel2.options) if(o.value===curS.dept) {{sel2.value=curS.dept; break;}}
+  // ★ curSではなく事前保存したstaffName/deptNameを使用
+  const sel1=$$('mStaff'); for(const o of sel1.options) if(o.value===staffName){{sel1.value=staffName;break;}}
+  const sel2=$$('mDept');  for(const o of sel2.options) if(o.value===deptName) {{sel2.value=deptName; break;}}
 
   renderBatchUI();
   $$('regOv').style.display='flex';
