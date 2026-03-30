@@ -20,6 +20,17 @@ SPREADSHEET_ID = "1BE8rI5_Em5xe8eAMhpdzG6AvMSwEcMGv-qKdrrpZd08"
 # 既存のカレンダーコンポーネントが内部でGASを叩いている可能性があるため定義だけ残します
 GAS_URL = "https://script.google.com/macros/s/AKfycbwX_A4Iqk_xdQmAF81v9PbB1jCJ39lkCIAb0LprRLDd42WxBAtKF04XAA1p08yRvaAQBQ/exec"
 
+# --- ここから追加 ---
+def get_gspread_client():
+    try:
+        creds_info = st.secrets["gcp_service_account"]
+        creds = Credentials.from_authorized_user_info(creds_info)
+        return gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"認証エラー: {e}")
+        return None
+# --- ここまで追加 ---
+
 st.set_page_config(layout="wide", page_title="共有シフト管理システム")
 
 # ──────────────────────────────────────────
