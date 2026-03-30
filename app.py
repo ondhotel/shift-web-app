@@ -353,61 +353,161 @@ with tab_reservation:
 with tab_chart:
     df = load_data()
     if not df.empty:
-        st.subheader("📅 表示期間の設定")
+        # ── カスタムCSS ──
+        st.markdown("""
+        <style>
+        .tl-header {
+            background: linear-gradient(135deg, #1a1d27 0%, #22263a 100%);
+            border: 1px solid #2d3148;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+        }
+        .tl-stat {
+            background: #1a1d27;
+            border: 1px solid #2d3148;
+            border-radius: 8px;
+            padding: 12px 16px;
+            text-align: center;
+        }
+        .tl-stat-num { font-size: 1.6rem; font-weight: 700; color: #5b8af0; line-height: 1; }
+        .tl-stat-lbl { font-size: 0.72rem; color: #6b7094; margin-top: 4px; }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # ── 期間設定 ──
         data_min = df["開始"].min().date()
         data_max = df["終了"].max().date()
         today    = datetime.now().date()
 
-        period_mode = st.radio(
-            "期間プリセット",
-            ["今日","今週","今月","過去7日","過去30日","カスタム"],
-            horizontal=True, key="period_mode"
-        )
-        if   period_mode == "今日":    range_start,range_end = today,today
-        elif period_mode == "今週":    range_start=today-timedelta(days=today.weekday()); range_end=range_start+timedelta(days=6)
-        elif period_mode == "今月":    range_start=today.replace(day=1); range_end=(today.replace(day=28)+timedelta(days=4)).replace(day=1)-timedelta(days=1)
-        elif period_mode == "過去7日":  range_start,range_end = today-timedelta(days=6),today
-        elif period_mode == "過去30日": range_start,range_end = today-timedelta(days=29),today
+        col_period, col_filter = st.columns([3, 2])
+        with col_period:
+            period_mode = st.radio(
+                "📅 表示期間",
+                ["今日", "今週", "今月", "過去7日", "過去30日", "カスタム"],
+                horizontal=True, key="period_mode"
+            )
+        if   period_mode == "今日":     range_start, range_end = today, today
+        elif period_mode == "今週":     range_start = today - timedelta(days=today.weekday()); range_end = range_start + timedelta(days=6)
+        elif period_mode == "今月":     range_start = today.replace(day=1); range_end = (today.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        elif period_mode == "過去7日":  range_start, range_end = today - timedelta(days=6), today
+        elif period_mode == "過去30日": range_start, range_end = today - timedelta(days=29), today
         else:
-            c1,c2 = st.columns(2)
+            c1, c2 = st.columns(2)
             range_start = c1.date_input("開始日", value=data_min, key="cs")
             range_end   = c2.date_input("終了日", value=data_max, key="ce")
 
         valid_df    = df[df["開始"] < df["終了"]].copy()
         mask        = (valid_df["開始"].dt.date <= range_end) & (valid_df["終了"].dt.date >= range_start)
-        filtered_df = valid_df[mask].sort_values(by=["従業員","開始"])
+        filtered_df = valid_df[mask].sort_values(by=["従業員", "開始"])
 
-        with st.expander("🔍 絞り込み", expanded=False):
-            fc1,fc2   = st.columns(2)
-            sel_staff = fc1.multiselect("スタッフ", STAFF_MASTER, default=[], key="tl_s")
-            sel_dept  = fc2.multiselect("部門",     DEPT_MASTER,  default=[], key="tl_d")
-            if sel_staff: filtered_df = filtered_df[filtered_df["従業員"].isin(sel_staff)]
-            if sel_dept:  filtered_df = filtered_df[filtered_df["部門"].isin(sel_dept)]
+        # ── 絞り込み ──
+        with col_filter:
+            with st.expander("🔍 スタッフ・部門で絞り込み", expanded=False):
+                sel_staff = st.multiselect("スタッフ", STAFF_MASTER, default=[], key="tl_s")
+                sel_dept  = st.multiselect("部門",     DEPT_MASTER,  default=[], key="tl_d")
+        if sel_staff: filtered_df = filtered_df[filtered_df["従業員"].isin(sel_staff)]
+        if sel_dept:  filtered_df = filtered_df[filtered_df["部門"].isin(sel_dept)]
 
-        st.caption(f"表示期間: **{range_start}** 〜 **{range_end}**（{len(filtered_df)} 件 / 全 {len(valid_df)} 件）")
-        st.divider()
+        # ── サマリーカード ──
+        n_staff  = filtered_df["従業員"].nunique()
+        n_shifts = len(filtered_df)
+        n_days   = (range_end - range_start).days + 1
+        total_h  = (filtered_df["終了"] - filtered_df["開始"]).dt.total_seconds().sum() / 3600 if not filtered_df.empty else 0
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.markdown(f'<div class="tl-stat"><div class="tl-stat-num">{n_staff}</div><div class="tl-stat-lbl">スタッフ数</div></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div class="tl-stat"><div class="tl-stat-num">{n_shifts}</div><div class="tl-stat-lbl">シフト件数</div></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div class="tl-stat"><div class="tl-stat-num">{n_days}</div><div class="tl-stat-lbl">表示日数</div></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div class="tl-stat"><div class="tl-stat-num">{total_h:.0f}h</div><div class="tl-stat-lbl">合計稼働時間</div></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         if not filtered_df.empty:
+            # ── カラーパレット（見やすい濃い目） ──
+            dept_colors = [
+                "#5b8af0", "#e07b5a", "#34d399", "#b07fc7", "#f59e0b",
+                "#5abfcc", "#e07bb0", "#7ec45a", "#c47e5a", "#f87171",
+                "#c4b05a", "#5ac4a2", "#c45a7e", "#8fc45a", "#c45ab0", "#5a8fc4"
+            ]
+
             fig = px.timeline(
-                filtered_df, x_start="開始", x_end="終了", y="従業員",
+                filtered_df,
+                x_start="開始", x_end="終了", y="従業員",
                 color="部門", text="部門",
-                color_discrete_sequence=px.colors.qualitative.Pastel,
-                title=f"シフト配置図（{range_start} 〜 {range_end}）"
+                color_discrete_sequence=dept_colors,
+                title=None,
             )
+
+            bar_h = 28
+            n_rows = len(filtered_df["従業員"].unique())
+            chart_h = max(360, n_rows * (bar_h + 16) + 120)
+
             fig.update_layout(
-                barmode="group", xaxis_title="日付・時刻", yaxis_title="スタッフ",
-                height=max(400, len(filtered_df["従業員"].unique())*50+150),
-                xaxis=dict(type="date",
-                           range=[f"{range_start} 00:00:00",f"{range_end} 23:59:59"],
-                           tickformat="%m/%d %H:%M"),
-                legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="right",x=1)
+                height=chart_h,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="#0f1117",
+                font=dict(family="'Noto Sans JP', sans-serif", color="#e8eaf2", size=12),
+                xaxis=dict(
+                    title=None,
+                    type="date",
+                    range=[f"{range_start} 00:00:00", f"{range_end} 23:59:59"],
+                    tickformat="%m/%d\n%H:%M",
+                    tickfont=dict(size=11, color="#6b7094"),
+                    gridcolor="#2d3148",
+                    gridwidth=1,
+                    showline=True,
+                    linecolor="#2d3148",
+                    zeroline=False,
+                ),
+                yaxis=dict(
+                    title=None,
+                    autorange="reversed",
+                    type="category",
+                    tickfont=dict(size=12, color="#e8eaf2"),
+                    gridcolor="#2d3148",
+                    gridwidth=1,
+                    showline=False,
+                    zeroline=False,
+                ),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom", y=1.02,
+                    xanchor="right", x=1,
+                    bgcolor="rgba(26,29,39,0.9)",
+                    bordercolor="#2d3148",
+                    borderwidth=1,
+                    font=dict(size=11, color="#e8eaf2"),
+                ),
+                margin=dict(l=10, r=10, t=20, b=40),
+                hoverlabel=dict(
+                    bgcolor="#22263a",
+                    bordercolor="#5b8af0",
+                    font=dict(size=12, color="#e8eaf2"),
+                ),
+                bargap=0.25,
+                bargroupgap=0.1,
             )
-            fig.update_yaxes(autorange="reversed",type="category")
-            st.plotly_chart(fig, use_container_width=True)
-            st.download_button(
-                f"📥 この期間のCSVダウンロード（{len(filtered_df)}件）",
+
+            fig.update_traces(
+                textfont=dict(size=10, color="#ffffff"),
+                textposition="inside",
+                insidetextanchor="middle",
+                marker=dict(line=dict(width=0)),
+                hovertemplate="<b>%{y}</b><br>部門: %{text}<br>開始: %{base|%m/%d %H:%M}<br>終了: %{x|%m/%d %H:%M}<extra></extra>",
+            )
+
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+            # ── フッター ──
+            fc1, fc2 = st.columns([3, 1])
+            fc1.caption(f"表示期間: **{range_start}** 〜 **{range_end}**　|　{n_shifts} 件 / 全 {len(valid_df)} 件")
+            fc2.download_button(
+                "📥 CSVダウンロード",
                 data=filtered_df.to_csv(index=False).encode("utf_8_sig"),
-                file_name=f"shift_{range_start}_{range_end}.csv", mime="text/csv"
+                file_name=f"shift_{range_start}_{range_end}.csv",
+                mime="text/csv",
+                use_container_width=True,
             )
         else:
             st.warning(f"選択期間（{range_start} 〜 {range_end}）にデータがありません。")
