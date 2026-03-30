@@ -155,17 +155,19 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 
 /* ── 日ビュー ── */
 .dv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
-.dshdr{{display:flex;border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;overflow:hidden;}}
-.dcrn{{width:58px;min-width:58px;flex-shrink:0;padding:7px 4px;font-size:10px;color:var(--tx2);text-align:center;border-right:1px solid var(--bd);}}
-.dsch-wrapper{{flex:1;display:flex;overflow:hidden;}}
-.dsch{{flex:1;min-width:110px;padding:6px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}}
-.dbody{{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
-.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);position:sticky;left:0;z-index:10;}}
+.dbody{{flex:1;display:flex;overflow:hidden;min-height:0;position:relative;}}
+.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);overflow-y:auto;scrollbar-width:none;}}
+.dtc::-webkit-scrollbar{{display:none;}}
 .dts{{height:48px;padding:3px 6px 0;border-bottom:1px solid var(--bd);font-size:10px;color:var(--tx2);font-family:var(--mn);text-align:right;}}
 .dts.mid{{border-top:2px solid var(--ac2);color:var(--ac2);font-weight:700;}}
-.dscs-outer{{flex:1;overflow-x:auto;display:flex;flex-direction:column;}}
-.dscs{{display:flex;flex:1;}}
-.dscol{{flex:1;min-width:110px;border-right:1px solid var(--bd);position:relative;cursor:crosshair;flex-shrink:0;}}
+
+.dscs-container{{flex:1;overflow:auto;display:flex;flex-direction:column;}}
+.dscs-header{{display:flex;background:var(--sf);border-bottom:2px solid var(--bd);position:sticky;top:0;z-index:20;}}
+.dcrn-placeholder{{width:0px;flex-shrink:0;}} /* 時刻列の横にあるヘッダー余白 */
+.dsch{{min-width:110px;flex:1;padding:7px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}}
+
+.dscs-body{{display:flex;position:relative;flex:1;}}
+.dscol{{min-width:110px;flex:1;border-right:1px solid var(--bd);position:relative;cursor:crosshair;flex-shrink:0;}}
 .dhs{{height:48px;border-bottom:1px solid var(--bd);}}
 .nzone{{position:absolute;left:0;right:0;background:var(--nday);border-top:1px dashed var(--ac2);pointer-events:none;z-index:0;}}
 .nowl{{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
@@ -785,20 +787,9 @@ function renderDay() {{
   }}
 
   const dv=mk('div','dv');
-  
-  // ヘッダー部
-  const sh=mk('div','dshdr');
-  const crn=mk('div','dcrn');
-  crn.innerHTML=ds===td?'<span style="color:var(--ac);font-weight:700;font-size:11px">今日</span>':'';
-  sh.appendChild(crn);
-  
-  const hWrapper = mk('div','dsch-wrapper');
-  staff.forEach(s=>{{ const h=mk('div','dsch'); h.textContent=s; hWrapper.appendChild(h); }});
-  sh.appendChild(hWrapper);
-  dv.appendChild(sh);
-
-  // ボディ部
   const db=mk('div','dbody');
+  
+  // 時刻列（垂直スクロールのみ。横スクロールからは除外）
   const tc=mk('div','dtc');
   for(let h=0;h<DAY_H;h++) {{
     const ts=mk('div','dts'+(h===MID_H?' mid':''));
@@ -810,8 +801,19 @@ function renderDay() {{
   }}
   db.appendChild(tc);
 
-  const scOuter = mk('div','dscs-outer');
-  const sc=mk('div','dscs');
+  // コンテンツコンテナ（横・縦スクロール）
+  const scContainer = mk('div','dscs-container');
+  
+  // ヘッダー（名前部分）
+  const scHeader = mk('div','dscs-header');
+  scHeader.appendChild(mk('div','dcrn-placeholder')); // 時刻列分のスペース（必要に応じて0px）
+  staff.forEach(s=>{{
+    const h=mk('div','dsch'); h.textContent=s; scHeader.appendChild(h);
+  }});
+  scContainer.appendChild(scHeader);
+
+  // ボディ（グリッド部分）
+  const scBody = mk('div','dscs-body');
   staff.forEach(s=>{{
     const col=mk('div','dscol');
     for(let h=0;h<DAY_H;h++) col.appendChild(mk('div','dhs'));
@@ -826,20 +828,24 @@ function renderDay() {{
        .forEach(x=>col.appendChild(mkBlock(x,false,0,0,1)));
     fil.filter(x=>x.staff===s&&x.start&&fmt(pd_(x.start))===dsN)
        .forEach(x=>{{ if(pd_(x.start).getHours()<(DAY_H-MID_H)) col.appendChild(mkBlock(x,false,1440,0,1)); }});
-    sc.appendChild(col);
-  }});
-  scOuter.appendChild(sc);
-  db.appendChild(scOuter); dv.appendChild(db); root.appendChild(dv);
-
-  // スクロール連動
-  scOuter.addEventListener('scroll', () => {{
-    hWrapper.scrollLeft = scOuter.scrollLeft;
+    scBody.appendChild(col);
   }});
 
+  // 現在時刻線
   const now=new Date(), diff=(now-cur)/60000;
   if(diff>=0&&diff<DAY_H*60) {{
-    const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:0;right:0;`; scOuter.querySelector('.dscs').appendChild(nl);
+    const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:0;right:0;`; scBody.appendChild(nl);
   }}
+
+  scContainer.appendChild(scBody);
+  db.appendChild(scContainer);
+  dv.appendChild(db);
+  root.appendChild(dv);
+
+  // スクロールの同期（時刻列とメインエリアの縦スクロールを合わせる）
+  scContainer.onscroll = () => {{
+    tc.scrollTop = scContainer.scrollTop;
+  }};
 }}
 
 // ══════════════════════════════════════
@@ -915,7 +921,8 @@ function setupDragDay(col, ds, dsN, staff) {{
     if(e.button||e.target.classList.contains('sb')) return;
     e.preventDefault();
     const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.dbody')?.scrollTop||0;
+    const scCont = col.closest('.dscs-container');
+    const scrollTop=scCont ? scCont.scrollTop : 0;
     const relY=e.clientY-rect.top+scrollTop;
     const sm=Math.min(Math.max(0,snap(y2m(relY))), DAY_H*60);
     el=mk('div','dragsel'); el.style.top=sm/60*HPX+'px'; el.style.height='0'; col.appendChild(el);
@@ -924,7 +931,8 @@ function setupDragDay(col, ds, dsN, staff) {{
   col.addEventListener('mousemove', e => {{
     if(!dragSt||dragSt.col!==col) return;
     const rect=col.getBoundingClientRect();
-    const scrollTop=col.closest('.dbody')?.scrollTop||0;
+    const scCont = col.closest('.dscs-container');
+    const scrollTop=scCont ? scCont.scrollTop : 0;
     const relY=e.clientY-rect.top+scrollTop;
     const em=Math.min(Math.max(0,snap(y2m(relY))), DAY_H*60);
     dragSt.em=em;
