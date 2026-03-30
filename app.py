@@ -208,7 +208,7 @@ with tab_calendar:
     # カレンダーコンポーネント内での削除(GAS呼び出し)を維持するためURLを渡す
     render_calendar_component(df, STAFF_MASTER, DEPT_MASTER, GAS_URL)
 
-# ── シフト登録フォーム（高速化） ──────────────────────
+# ── シフト登録フォーム ──────────────────────
 with tab_register:
     with st.form("shift_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -220,35 +220,16 @@ with tab_register:
             t1, t2  = st.columns(2)
             start_t = t1.time_input("開始", datetime.strptime("09:00", "%H:%M"))
             end_t   = t2.time_input("終了", datetime.strptime("18:00", "%H:%M"))
-
-        # ★ ここからインデントを揃えてください（with st.form の中に入っています）
         if st.form_submit_button("スプレッドシートに保存"):
             if name == "未登録" or dept == "未登録":
                 st.error("先に管理パネルから従業員と部門を登録してください。")
             elif start_t >= end_t:
                 st.error("終了時間は開始時間より後に設定してください。")
             else:
-                # 保存データを準備
-                save_row = [name, dept, f"{date} {start_t}", f"{date} {end_t}"]
-
-                # 裏側で保存する関数を定義
-                def bg_save(data):
-                    client = get_gspread_client()
-                    if client:
-                        try:
-                            sh = client.open_by_key(SPREADSHEET_ID).worksheet("シフトデータ")
-                            sh.append_row(data)
-                        except:
-                            pass
-
-                # 保存の完了を待たずに別スレッドで実行
-                thread = threading.Thread(target=bg_save, args=(save_row,))
-                thread.start()
-
-                # 即座に完了メッセージ
-                st.success(f"✅ 受付完了！ (裏で保存しています: {name})")
-                
-                # 注意：ここでは st.cache_data.clear() はしません（すると読み込みで待たされるため）
+                requests.get(GAS_URL, params={"action":"add_shift","name":name,"dept":dept,
+                                              "start":f"{date} {start_t}","end":f"{date} {end_t}"})
+                st.success(f"保存しました: {name} ({start_t}〜{end_t})")
+                st.cache_data.clear(); st.rerun()
 
 # ── 予約集計 ───────────────────────────────
 with tab_reservation:
