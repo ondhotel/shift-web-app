@@ -84,7 +84,7 @@ def parse_rules_text(text: str) -> dict:
 # ──────────────────────────────────────────
 # データ読み込み（gspreadで高速化）
 # ──────────────────────────────────────────
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=600)
 def load_data():
     client = get_gspread_client()
     if not client: return pd.DataFrame()
@@ -107,7 +107,7 @@ def load_data():
         return pd.DataFrame(columns=["従業員", "部門", "開始", "終了"])
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=600)
 def load_masters():
     client = get_gspread_client()
     if not client: return [], []
