@@ -789,7 +789,7 @@ function renderDay() {{
   const dv=mk('div','dv');
   const db=mk('div','dbody');
   
-  // 時刻列（垂直スクロールのみ。横スクロールからは除外）
+  // 時刻列（垂直スクロールのみ）
   const tc=mk('div','dtc');
   for(let h=0;h<DAY_H;h++) {{
     const ts=mk('div','dts'+(h===MID_H?' mid':''));
@@ -801,12 +801,12 @@ function renderDay() {{
   }}
   db.appendChild(tc);
 
-  // コンテンツコンテナ（横・縦スクロール）
+  // コンテンツコンテナ
   const scContainer = mk('div','dscs-container');
   
   // ヘッダー（名前部分）
   const scHeader = mk('div','dscs-header');
-  scHeader.appendChild(mk('div','dcrn-placeholder')); // 時刻列分のスペース（必要に応じて0px）
+  scHeader.appendChild(mk('div','dcrn-placeholder'));
   staff.forEach(s=>{{
     const h=mk('div','dsch'); h.textContent=s; scHeader.appendChild(h);
   }});
@@ -842,7 +842,6 @@ function renderDay() {{
   dv.appendChild(db);
   root.appendChild(dv);
 
-  // スクロールの同期（時刻列とメインエリアの縦スクロールを合わせる）
   scContainer.onscroll = () => {{
     tc.scrollTop = scContainer.scrollTop;
   }};
@@ -873,7 +872,6 @@ function mkBlock(s, showStaff, offsetMins, lane, total) {{
 
   const nm=mk('div','sbn'); nm.textContent=showStaff?s.staff:s.dept; b.appendChild(nm);
   if(ht>26) {{ const tm=mk('div','sbt'); tm.textContent=`${{p2(st.getHours())}}:${{p2(st.getMinutes())}}-${{p2(et.getHours())}}:${{p2(et.getMinutes())}}`; b.appendChild(tm); }}
-  // dataset.idxをセット（イベント委任用）
   b.dataset.idx = SHIFTS.indexOf(s);
   return b;
 }}
@@ -910,7 +908,7 @@ function setupDragWeek(col, dateStr) {{
     if(!dragSt||dragSt.col!==col) return;
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     el.remove(); const dt=dragSt.date; dragSt=null;
-    if(en-s<5)return; // 誤クリック防止
+    if(en-s<5)return;
     openReg(dt, null, null, '', '', s, en<s+15?s+60:en);
   }});
 }}
@@ -944,8 +942,7 @@ function setupDragDay(col, ds, dsN, staff) {{
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     const isN=s>=1440, actualDs=isN?dragSt.dsN:dragSt.ds, stf=dragSt.staff;
     el.remove(); dragSt=null;
-    if(en-s<5)return; // 誤クリック防止
-    // sとenをそのまま渡す（DAY_H対応: sが1440以上なら翌日扱い）
+    if(en-s<5)return;
     openReg(actualDs, null, null, stf, '', s%1440, en<s+15?s+60:en);
   }});
 }}
@@ -954,7 +951,6 @@ document.addEventListener('mouseup', () => {{ if(dragSt?.el) dragSt.el.remove();
 // ══════════════════════════════════════
 // 登録モーダル
 // ══════════════════════════════════════
-// smMins / emMins: 分単位（オプション。ドラッグ時に渡す）
 function openReg(ds, stStr, enStr, staff='', dept='', smMins=null, emMins=null) {{
   editMode = false;
   editOrig = null;
@@ -965,15 +961,11 @@ function openReg(ds, stStr, enStr, staff='', dept='', smMins=null, emMins=null) 
   $$('mDate').value = ds || fmt(cur);
 
   if(smMins !== null) {{
-    // ドラッグ時: 分単位から時・分を設定（36時間対応）
     $$('mSH').value = Math.floor(smMins / 60);
     $$('mSM').value = smMins % 60;
-    // emMinsが1440以上なら翌日
-    const totalEH = Math.floor(emMins / 60);
-    $$('mEH').value = totalEH;
+    $$('mEH').value = Math.floor(emMins / 60);
     $$('mEM').value = emMins % 60;
   }} else if(stStr) {{
-    // 文字列 "HH:MM" から設定
     const [sh,sm2] = stStr.split(':').map(Number);
     $$('mSH').value = sh; $$('mSM').value = sm2;
     const [eh,em2] = (enStr||'18:00').split(':').map(Number);
@@ -993,22 +985,16 @@ function openReg(ds, stStr, enStr, staff='', dept='', smMins=null, emMins=null) 
 
 function closeReg() {{ $$('regOv').style.display='none'; batch=[]; editMode=false; editOrig=null; renderBatchUI(); }}
 
-// 時・分フィールドから "YYYY-MM-DD HH:MM" を生成（日跨ぎ対応）
 function getStartEnd() {{
   const ds = $$('mDate').value;
   const sh = parseInt($$('mSH').value)||0;
   const sm = parseInt($$('mSM').value)||0;
   const eh = parseInt($$('mEH').value)||0;
   const em = parseInt($$('mEM').value)||0;
-
   const startDt = `${{ds}} ${{p2(sh)}}:${{p2(sm)}}`;
-
-  // 終了が24時以上なら翌日
   if(eh>=24) {{
     const nextDate = new Date(ds+'T00:00:00'); nextDate.setDate(nextDate.getDate()+1);
-    const nextDs = fmt(nextDate);
-    const realEH = eh-24;
-    const endDt = `${{nextDs}} ${{p2(realEH)}}:${{p2(em)}}`;
+    const endDt = `${{fmt(nextDate)}} ${{p2(eh-24)}}:${{p2(em)}}`;
     return {{startDt, endDt, valid: sh<24 && em<=59 && sm<=59}};
   }}
   const endDt = `${{ds}} ${{p2(eh)}}:${{p2(em)}}`;
@@ -1019,10 +1005,9 @@ function addBatch() {{
   const staff=$$('mStaff').value, dept=$$('mDept').value;
   const {{startDt, endDt, valid}} = getStartEnd();
   if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
-  if(!valid){{alert('時間が不正です。終了は開始より後にしてください');return;}}
+  if(!valid){{alert('時間が不正です');return;}}
   batch.push({{staff,dept,start:startDt,end:endDt}});
   renderBatchUI();
-  showToast(`➕ ${{staff}} ${{startDt.slice(11)}}-${{endDt.slice(11)}}`,'ok',1800);
 }}
 
 function renderBatchUI() {{
@@ -1034,14 +1019,13 @@ function renderBatchUI() {{
   lst.innerHTML='';
   batch.forEach((item,i)=>{{
     const row=mk('div','bi');
-    const lb=mk('div','bilbl'); lb.textContent=`${{item.staff}} / ${{item.dept}} / ${{item.start}}-${{item.end.slice(11)}}`;
+    row.innerHTML=`<div class="bilbl">${{item.staff}} / ${{item.dept}} / ${{item.start}}-${{item.end.slice(11)}}</div>`;
     const dl=mk('button','bidel'); dl.textContent='✕'; dl.onclick=()=>{{batch.splice(i,1);renderBatchUI();}};
-    row.appendChild(lb); row.appendChild(dl); lst.appendChild(row);
+    row.appendChild(dl); lst.appendChild(row);
   }});
 }}
 
 async function saveAll() {{
-  // 編集モード
   if(editMode && editOrig) {{
     const staff=$$('mStaff').value, dept=$$('mDept').value;
     const {{startDt, endDt, valid}} = getStartEnd();
@@ -1049,54 +1033,29 @@ async function saveAll() {{
     if(!valid){{alert('時間が不正です');return;}}
     closeReg(); showLdg('更新中...');
     const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-    let ok=false;
     try {{
-      // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
-        start:norm(editOrig.start),end:norm(editOrig.end)}}));
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
-        start:startDt,end:endDt}}));
-      ok=true;
-    }} catch(ex){{console.warn(ex);}}
-    // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
-    if(idx>=0) {{
-      SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
-        start:startDt.replace(' ','T')+':00',
-        end:endDt.replace(' ','T')+':00'}};
-    }}
-    hideLdg();
-    showToast(ok?'✅ 更新しました':'⚠️ 画面更新済み（GAS側も確認してください）', ok?'ok':'wn');
-    renderView();
-    return;
+      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,start:norm(editOrig.start),end:norm(editOrig.end)}}));
+      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,start:startDt,end:endDt}}));
+      const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
+      if(idx>=0) SHIFTS[idx]={{...SHIFTS[idx], staff, dept, start:startDt.replace(' ','T')+':00', end:endDt.replace(' ','T')+':00'}};
+    }} catch(ex){{}}
+    hideLdg(); renderView(); return;
   }}
-
-  // 通常登録
-  let items=[];
-  if(batch.length>0) {{
-    items=[...batch];
-  }} else {{
+  let items=batch.length?batch:[];
+  if(!batch.length){{
     const staff=$$('mStaff').value, dept=$$('mDept').value;
     const {{startDt, endDt, valid}} = getStartEnd();
-    if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
-    if(!valid){{alert('時間が不正です');return;}}
-    items=[{{staff,dept,start:startDt,end:endDt}}];
+    if(staff&&dept&&valid) items=[{{staff,dept,start:startDt,end:endDt}}];
   }}
-  closeReg(); showLdg(`${{items.length}}件 保存中...`);
-  let ok=0,fail=0;
+  if(!items.length) return;
+  closeReg(); showLdg('保存中...');
   for(const item of items) {{
     try {{
-      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,
-        start:item.start,end:item.end}}));
-      SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,
-        start:item.start.replace(' ','T')+':00',
-        end:item.end.replace(' ','T')+':00'}});
-      ok++;
-    }} catch{{fail++;}}
+      await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:item.staff,dept:item.dept,start:item.start,end:item.end}}));
+      SHIFTS.push({{rowIndex:-1,staff:item.staff,dept:item.dept,start:item.start.replace(' ','T')+':00', end:item.end.replace(' ','T')+':00'}});
+    }} catch{{}}
   }}
-  hideLdg();
-  showToast(fail===0?`✅ ${{ok}}件 保存しました`:`⚠️ ${{ok}}件成功/${{fail}}件失敗`, fail===0?'ok':'wn');
-  renderView();
+  hideLdg(); renderView();
 }}
 
 // ══════════════════════════════════════
@@ -1128,20 +1087,14 @@ function editShift() {{
   $$('mDate').value = fmt(st);
   $$('mSH').value = st.getHours();
   $$('mSM').value = st.getMinutes();
-  // 終了が翌日なら36時間表記に
+  
   const diffDays = Math.floor((et - st) / 86400000);
-  if(diffDays>=1) {{
-    $$('mEH').value = et.getHours()+24;
-  }} else {{
-    $$('mEH').value = et.getHours();
-  }}
+  $$('mEH').value = diffDays>=1 ? et.getHours()+24 : et.getHours();
   $$('mEM').value = et.getMinutes();
   updateNextDayLabel();
 
-  const sel1=$$('mStaff'); for(const o of sel1.options) if(o.value===curS.staff){{sel1.value=curS.staff;break;}}
-  const sel2=$$('mDept');  for(const o of sel2.options) if(o.value===curS.dept) {{sel2.value=curS.dept; break;}}
-
-  renderBatchUI();
+  $$('mStaff').value = curS.staff;
+  $$('mDept').value = curS.dept;
   $$('regOv').style.display='flex';
 }}
 
@@ -1149,23 +1102,14 @@ async function delShift() {{
   if(!curS||!confirm(`${{curS.staff}} のシフトを削除しますか？`)) return;
   const s=curS; closeDet(); showLdg('削除中...');
   const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
-  let ok=false;
   try {{
-    const r=await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,
-      start:norm(s.start),end:norm(s.end)}}));
-    const t=await r.text();
-    ok=r.ok&&(t.includes('delet')||t.includes('ok')||t.trim().length===0);
-  }} catch(ex){{console.warn(ex);}}
-  const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
-  if(i>=0) SHIFTS.splice(i,1);
-  hideLdg();
-  showToast(ok?'🗑️ 削除しました':'🗑️ 画面から削除（GAS側も確認してください）', ok?'ok':'wn');
-  renderView();
+    await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:s.staff,dept:s.dept,start:norm(s.start),end:norm(s.end)}}));
+    const i=curI>=0?curI:SHIFTS.findIndex(x=>x.staff===s.staff&&x.dept===s.dept&&x.start===s.start);
+    if(i>=0) SHIFTS.splice(i,1);
+  }} catch(ex){{}}
+  hideLdg(); renderView();
 }}
 
-// ══════════════════════════════════════
-// ヘルパー
-// ══════════════════════════════════════
 function showToast(msg,type='ok',dur=3200) {{
   const t=mk('div',`toast ${{type}}`); t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),dur);
