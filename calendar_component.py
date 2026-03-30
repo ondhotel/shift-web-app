@@ -155,15 +155,17 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
 
 /* ── 日ビュー ── */
 .dv{{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}}
-.dshdr{{display:flex;border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;}}
+.dshdr{{display:flex;border-bottom:2px solid var(--bd);background:var(--sf);flex-shrink:0;overflow:hidden;}}
 .dcrn{{width:58px;min-width:58px;flex-shrink:0;padding:7px 4px;font-size:10px;color:var(--tx2);text-align:center;border-right:1px solid var(--bd);}}
-.dsch{{flex:1;min-width:88px;padding:6px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-.dbody{{flex:1;display:flex;overflow:auto;min-height:0;position:relative;}}
-.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);position:sticky;left:0;z-index:2;}}
+.dsch-wrapper{{flex:1;display:flex;overflow:hidden;}}
+.dsch{{flex:1;min-width:110px;padding:6px 4px;text-align:center;border-right:1px solid var(--bd);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}}
+.dbody{{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative;}}
+.dtc{{width:58px;min-width:58px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);position:sticky;left:0;z-index:10;}}
 .dts{{height:48px;padding:3px 6px 0;border-bottom:1px solid var(--bd);font-size:10px;color:var(--tx2);font-family:var(--mn);text-align:right;}}
 .dts.mid{{border-top:2px solid var(--ac2);color:var(--ac2);font-weight:700;}}
-.dscs{{flex:1;display:flex;}}
-.dscol{{flex:1;min-width:88px;border-right:1px solid var(--bd);position:relative;cursor:crosshair;}}
+.dscs-outer{{flex:1;overflow-x:auto;display:flex;flex-direction:column;}}
+.dscs{{display:flex;flex:1;}}
+.dscol{{flex:1;min-width:110px;border-right:1px solid var(--bd);position:relative;cursor:crosshair;flex-shrink:0;}}
 .dhs{{height:48px;border-bottom:1px solid var(--bd);}}
 .nzone{{position:absolute;left:0;right:0;background:var(--nday);border-top:1px dashed var(--ac2);pointer-events:none;z-index:0;}}
 .nowl{{position:absolute;left:0;right:0;height:2px;background:#f87171;z-index:6;pointer-events:none;}}
@@ -248,7 +250,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   <div id="cal"></div>
 </div>
 
-<!-- 登録 / 編集モーダル -->
 <div class="ov" id="regOv" style="display:none" onclick="if(event.target===this)closeReg()">
   <div class="modal">
     <div class="mt">📋 <span id="regTitle">シフト登録</span> <span id="regLbl" style="font-size:11px;color:var(--tx2);font-weight:400;"></span></div>
@@ -283,7 +284,6 @@ html,body{{width:100%;height:{H}px;overflow:hidden;background:var(--bg);color:va
   </div>
 </div>
 
-<!-- 詳細モーダル -->
 <div class="ov" id="detOv" style="display:none" onclick="if(event.target===this)closeDet()">
   <div class="modal">
     <div class="mt">📌 シフト詳細</div>
@@ -785,13 +785,19 @@ function renderDay() {{
   }}
 
   const dv=mk('div','dv');
+  
+  // ヘッダー部
   const sh=mk('div','dshdr');
   const crn=mk('div','dcrn');
   crn.innerHTML=ds===td?'<span style="color:var(--ac);font-weight:700;font-size:11px">今日</span>':'';
   sh.appendChild(crn);
-  staff.forEach(s=>{{ const h=mk('div','dsch'); h.textContent=s; sh.appendChild(h); }});
+  
+  const hWrapper = mk('div','dsch-wrapper');
+  staff.forEach(s=>{{ const h=mk('div','dsch'); h.textContent=s; hWrapper.appendChild(h); }});
+  sh.appendChild(hWrapper);
   dv.appendChild(sh);
 
+  // ボディ部
   const db=mk('div','dbody');
   const tc=mk('div','dtc');
   for(let h=0;h<DAY_H;h++) {{
@@ -804,6 +810,7 @@ function renderDay() {{
   }}
   db.appendChild(tc);
 
+  const scOuter = mk('div','dscs-outer');
   const sc=mk('div','dscs');
   staff.forEach(s=>{{
     const col=mk('div','dscol');
@@ -821,11 +828,17 @@ function renderDay() {{
        .forEach(x=>{{ if(pd_(x.start).getHours()<(DAY_H-MID_H)) col.appendChild(mkBlock(x,false,1440,0,1)); }});
     sc.appendChild(col);
   }});
-  db.appendChild(sc); dv.appendChild(db); root.appendChild(dv);
+  scOuter.appendChild(sc);
+  db.appendChild(scOuter); dv.appendChild(db); root.appendChild(dv);
+
+  // スクロール連動
+  scOuter.addEventListener('scroll', () => {{
+    hWrapper.scrollLeft = scOuter.scrollLeft;
+  }});
 
   const now=new Date(), diff=(now-cur)/60000;
   if(diff>=0&&diff<DAY_H*60) {{
-    const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:58px;right:0;`; db.appendChild(nl);
+    const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:0;right:0;`; scOuter.querySelector('.dscs').appendChild(nl);
   }}
 }}
 
@@ -1026,20 +1039,19 @@ async function saveAll() {{
     const {{startDt, endDt, valid}} = getStartEnd();
     if(!staff||!dept||!$$('mDate').value){{alert('すべて入力してください');return;}}
     if(!valid){{alert('時間が不正です');return;}}
-    const savedOrig={{...editOrig}};  // closeReg前に保存(closeRegでeditOrig=nullになるため)
     closeReg(); showLdg('更新中...');
     const norm=iso=>(iso.replace('T',' ')+'').slice(0,16);
     let ok=false;
     try {{
       // 旧データ削除 → 新データ追加
-      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:savedOrig.staff,dept:savedOrig.dept,
-        start:norm(savedOrig.start),end:norm(savedOrig.end)}}));
+      await fetch(GAS+'?'+new URLSearchParams({{action:'del_shift',name:editOrig.staff,dept:editOrig.dept,
+        start:norm(editOrig.start),end:norm(editOrig.end)}}));
       await fetch(GAS+'?'+new URLSearchParams({{action:'add_shift',name:staff,dept,
         start:startDt,end:endDt}}));
       ok=true;
     }} catch(ex){{console.warn(ex);}}
     // ローカル更新
-    const idx=SHIFTS.findIndex(x=>x.staff===savedOrig.staff&&x.dept===savedOrig.dept&&x.start===savedOrig.start);
+    const idx=SHIFTS.findIndex(x=>x.staff===editOrig.staff&&x.dept===editOrig.dept&&x.start===editOrig.start);
     if(idx>=0) {{
       SHIFTS[idx]={{...SHIFTS[idx], staff, dept,
         start:startDt.replace(' ','T')+':00',
