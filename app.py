@@ -13,7 +13,7 @@ from reservation_parser import load_reservation_csv, build_daily_summary, PLAN_R
 # 設定
 # ──────────────────────────────────────────
 SPREADSHEET_ID = "1BE8rI5_Em5xe8eAMhpdzG6AvMSwEcMGv-qKdrrpZd08"
-GAS_URL = "https://script.google.com/macros/s/AKfycbzyv5CnTxPW3vPlarYsola88A_sDq1xvc1L6jorKEG_QjXtgleAx0Krf96Jf-vMbuRmNw/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbwX_A4Iqk_xdQmAF81v9PbB1jCJ39lkCIAb0LprRLDd42WxBAtKF04XAA1p08yRvaAQBQ/exec"
 
 st.set_page_config(layout="wide", page_title="共有シフト管理システム")
 
