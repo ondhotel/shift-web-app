@@ -789,7 +789,7 @@ function renderDay() {{
   const dv=mk('div','dv');
   const db=mk('div','dbody');
   
-  // 時刻列（垂直スクロールのみ）
+  // 時刻列
   const tc=mk('div','dtc');
   for(let h=0;h<DAY_H;h++) {{
     const ts=mk('div','dts'+(h===MID_H?' mid':''));
@@ -804,7 +804,6 @@ function renderDay() {{
   // コンテンツコンテナ
   const scContainer = mk('div','dscs-container');
   
-  // ヘッダー（名前部分）
   const scHeader = mk('div','dscs-header');
   scHeader.appendChild(mk('div','dcrn-placeholder'));
   staff.forEach(s=>{{
@@ -812,7 +811,6 @@ function renderDay() {{
   }});
   scContainer.appendChild(scHeader);
 
-  // ボディ（グリッド部分）
   const scBody = mk('div','dscs-body');
   staff.forEach(s=>{{
     const col=mk('div','dscol');
@@ -831,7 +829,6 @@ function renderDay() {{
     scBody.appendChild(col);
   }});
 
-  // 現在時刻線
   const now=new Date(), diff=(now-cur)/60000;
   if(diff>=0&&diff<DAY_H*60) {{
     const nl=mk('div','nowl'); nl.style.cssText=`top:${{diff/60*HPX}}px;left:0;right:0;`; scBody.appendChild(nl);
@@ -908,8 +905,8 @@ function setupDragWeek(col, dateStr) {{
     if(!dragSt||dragSt.col!==col) return;
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     el.remove(); const dt=dragSt.date; dragSt=null;
-    if(en-s<5)return;
-    openReg(dt, null, null, '', '', s, en<s+15?s+60:en);
+    if(en-s<15)return;
+    openReg(dt, null, null, '', '', s, en);
   }});
 }}
 
@@ -942,8 +939,8 @@ function setupDragDay(col, ds, dsN, staff) {{
     const s=Math.min(dragSt.sm,dragSt.em), en=Math.max(dragSt.sm,dragSt.em);
     const isN=s>=1440, actualDs=isN?dragSt.dsN:dragSt.ds, stf=dragSt.staff;
     el.remove(); dragSt=null;
-    if(en-s<5)return;
-    openReg(actualDs, null, null, stf, '', s%1440, en<s+15?s+60:en);
+    if(en-s<15)return;
+    openReg(actualDs, null, null, stf, '', s%1440, en%1440 || (en >= 1440 ? en/60*60 : en));
   }});
 }}
 document.addEventListener('mouseup', () => {{ if(dragSt?.el) dragSt.el.remove(); dragSt=null; }});
@@ -955,8 +952,8 @@ function openReg(ds, stStr, enStr, staff='', dept='', smMins=null, emMins=null) 
   editMode = false;
   editOrig = null;
   $$('regTitle').textContent = 'シフト登録';
-  $$('addBatchBtn').style.display = '';
-  $$('regHint').style.display = '';
+  $$('addBatchBtn').style.display = 'block';
+  $$('regHint').style.display = 'block';
 
   $$('mDate').value = ds || fmt(cur);
 
@@ -977,8 +974,9 @@ function openReg(ds, stStr, enStr, staff='', dept='', smMins=null, emMins=null) 
 
   updateNextDayLabel();
 
-  if(staff) {{ const sel=$$('mStaff'); for(const o of sel.options) if(o.value===staff){{sel.value=staff;break;}} }}
-  if(dept)  {{ const sel=$$('mDept');  for(const o of sel.options) if(o.value===dept) {{sel.value=dept; break;}} }}
+  if(staff) $$('mStaff').value = staff;
+  if(dept)  $$('mDept').value = dept;
+  
   renderBatchUI();
   $$('regOv').style.display='flex';
 }}
@@ -1076,10 +1074,12 @@ function closeDet() {{ $$('detOv').style.display='none'; curS=null; }}
 
 function editShift() {{
   if(!curS) return;
-  editMode=true; editOrig={{...curS}};
+  editMode=true;
+  editOrig={{...curS}};
+  
   const st=pd_(curS.start), et=pd_(curS.end);
-  closeDet();
 
+  // 編集モーダルの初期化
   $$('regTitle').textContent = 'シフト編集';
   $$('addBatchBtn').style.display='none';
   $$('regHint').style.display='none';
@@ -1089,12 +1089,19 @@ function editShift() {{
   $$('mSM').value = st.getMinutes();
   
   const diffDays = Math.floor((et - st) / 86400000);
-  $$('mEH').value = diffDays>=1 ? et.getHours()+24 : et.getHours();
+  if(diffDays >= 1) {{
+    $$('mEH').value = et.getHours() + 24;
+  }} else {{
+    $$('mEH').value = et.getHours();
+  }}
   $$('mEM').value = et.getMinutes();
   updateNextDayLabel();
 
   $$('mStaff').value = curS.staff;
   $$('mDept').value = curS.dept;
+
+  // モーダルの表示切り替え
+  $$('detOv').style.display='none';
   $$('regOv').style.display='flex';
 }}
 
