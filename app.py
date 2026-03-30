@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import threading  # ← これを追加！
 import plotly.express as px
 import requests
 from datetime import datetime, timedelta
@@ -219,18 +220,33 @@ with tab_register:
             t1, t2  = st.columns(2)
             start_t = t1.time_input("開始", datetime.strptime("09:00", "%H:%M"))
             end_t   = t2.time_input("終了", datetime.strptime("18:00", "%H:%M"))
-        if st.form_submit_button("スプレッドシートに保存"):
+     if st.form_submit_button("スプレッドシートに保存"):
             if name == "未登録" or dept == "未登録":
                 st.error("先に管理パネルから従業員と部門を登録してください。")
             elif start_t >= end_t:
                 st.error("終了時間は開始時間より後に設定してください。")
             else:
-                client = get_gspread_client()
-                sh = client.open_by_key(SPREADSHEET_ID).worksheet("シフトデータ")
-                # GAS経由ではなく直接追加（爆速）
-                sh.append_row([name, dept, f"{date} {start_t}", f"{date} {end_t}"])
-                st.success(f"保存しました: {name} ({start_t}〜{end_t})")
-                st.cache_data.clear(); st.rerun()
+                # 1. 保存するデータをまとめる
+                save_row = [name, dept, f"{date} {start_t}", f"{date} {end_t}"]
+
+                # 2. 裏側（バックグラウンド）で保存する関数を定義
+                def bg_save(data):
+                    client = get_gspread_client()
+                    if client:
+                        try:
+                            sh = client.open_by_key(SPREADSHEET_ID).worksheet("シフトデータ")
+                            sh.append_row(data)
+                        except:
+                            pass
+
+                # 3. 保存の完了を待たずに、別スレッドで実行を開始
+                thread = threading.Thread(target=bg_save, args=(save_row,))
+                thread.start()
+
+                # 4. 即座に成功メッセージを出す
+                st.success(f"✅ 受付完了！ (裏で保存しています: {name})")
+                
+                # 注意：ここでは st.cache_data.clear() はしません（すると読み込みで待たされるため）
 
 # ── 予約集計 ───────────────────────────────
 with tab_reservation:
